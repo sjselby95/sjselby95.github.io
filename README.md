@@ -1,13 +1,14 @@
-# Personal Portfolio
+# sjselby95.github.io
 
-My personal portfolio website, documenting my transition from
-commercial truck driving into IT and cybersecurity.
+Personal portfolio site for Steven Selby — documenting a career transition from commercial truck driving into IT and cybersecurity.
 
-## What's here
+## Current state
 
-A simple, hand-built site showcasing my certifications, projects,
-and hands-on security labs. Built with plain HTML and CSS as a
-learning exercise, and grown incrementally over time.
+This site is a placeholder while a full rebuild is in progress. It displays current certifications and a brief background, and points visitors to the main portfolio at [cyberskillscorner.xyz](https://cyberskillscorner.xyz).
+
+## What's coming
+
+The site will be rebuilt and eventually pointed at the custom domain. The new version will include a proper portfolio, labs writeups, and more detailed content pulled from cyberskillscorner.xyz.
 
 ## Live site
 
