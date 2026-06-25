@@ -1,22 +1,117 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
-	background-color: black;
-
+    background-color: #0d0d0d;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
+
+a {
+    color: #39ff14;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Header */
+header {
+    text-align: center;
+    padding: 64px 24px 48px;
+    border-bottom: 1px solid #1e1e1e;
+}
+
 h1 {
-	text-align: center;
-	color: limegreen;
-
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: #39ff14;
+    letter-spacing: 0.03em;
 }
+
+.tagline {
+    margin-top: 10px;
+    font-size: 1.05rem;
+    color: #888;
+    letter-spacing: 0.04em;
+}
+
+/* Main content */
+main {
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 48px 24px;
+    flex: 1;
+}
+
+/* Rebuild notice */
+.notice {
+    background-color: #111;
+    border-left: 3px solid #39ff14;
+    padding: 14px 18px;
+    margin-bottom: 48px;
+    font-size: 0.95rem;
+    color: #aaa;
+    border-radius: 0 4px 4px 0;
+}
+
+.notice strong {
+    color: #e0e0e0;
+}
+
+/* Sections */
+section {
+    margin-bottom: 44px;
+}
+
 h2 {
-	text-align: left;
-	color: limegreen;
-
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #39ff14;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1e1e1e;
 }
-p {
-	color: white;
 
+p {
+    color: #c0c0c0;
+    max-width: 60ch;
 }
 
 ul {
-	color:hotpink;
+    list-style: none;
+    padding: 0;
+}
+
+ul li {
+    color: #c0c0c0;
+    padding: 4px 0;
+}
+
+ul li::before {
+    content: '›';
+    color: #39ff14;
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 0.8rem;
+    color: #444;
+    border-top: 1px solid #1e1e1e;
 }
