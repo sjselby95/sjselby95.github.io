@@ -81,6 +81,16 @@ footer {
 /* Mobile: swap to a stacked nav */
 .mobile-nav { display: none; width: 100%; max-width: 380px; }
 .mobile-nav .id { text-align: center; margin-bottom: 22px; }
+.mobile-nav .id .avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  border: 2px solid var(--green);
+  display: block;
+  margin: 0 auto 14px;
+}
 .mobile-nav .id .name { font-size: 18px; letter-spacing: 3px; color: var(--text); }
 .mobile-nav .id .title { font-size: 12px; letter-spacing: 2px; color: var(--text-soft); margin-top: 4px; }
 .mobile-nav a {
