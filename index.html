@@ -1,63 +1,214 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Steven Selby</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>cyberskillscorner — Steven Selby</title>
+<meta name="description" content="Steven Selby — IT help desk moving into cybersecurity. Portfolio, labs, projects, and certifications." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#000000;
+    --panel:#0a0d0f;
+    --panel-2:#0c0f12;
+    --metal:#1c2024;
+    --metal-edge:#33373b;
+    --line:#1a1d20;
+    --green:#2bbd79;
+    --green-bright:#3fe39a;
+    --green-dim:#163a28;
+    --text:#cfe9dd;
+    --text-soft:#9fb8ad;
+    --text-mute:#4a564f;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--mono);}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+
+  .board-wrap{width:100%;max-width:960px;}
+  svg.board{width:100%;height:auto;display:block;}
+
+  /* clickable component groups */
+  .link{cursor:pointer;}
+  .link .panel{transition:stroke .18s ease, stroke-opacity .18s ease, filter .18s ease;}
+  .link:hover .panel,
+  .link:focus-visible .panel{stroke:var(--green-bright);stroke-opacity:1;filter:drop-shadow(0 0 6px rgba(63,227,154,.55));}
+  .link:focus-visible{outline:none;}
+  .link .lbl{transition:fill .18s ease;}
+  .link:hover .lbl,
+  .link:focus-visible .lbl{fill:var(--green-bright);}
+
+  /* the CMOS easter egg stays quiet until hovered */
+  .egg .panel{stroke-opacity:.35;}
+  .egg:hover .panel,
+  .egg:focus-visible .panel{stroke:var(--green-bright);stroke-opacity:1;filter:drop-shadow(0 0 5px rgba(63,227,154,.5));}
+
+  footer{margin-top:18px;font-size:12px;letter-spacing:1px;color:var(--text-mute);}
+
+  /* mobile: the board is unreadable tiny, so swap to a stacked nav */
+  .mobile-nav{display:none;width:100%;max-width:380px;}
+  .mobile-nav .id{text-align:center;margin-bottom:22px;}
+  .mobile-nav .id .name{font-size:18px;letter-spacing:3px;color:var(--text);}
+  .mobile-nav .id .title{font-size:12px;letter-spacing:2px;color:var(--text-soft);margin-top:4px;}
+  .mobile-nav a{display:flex;justify-content:space-between;align-items:center;
+    padding:16px 18px;margin-bottom:10px;border:1px solid rgba(43,189,121,.45);border-radius:10px;
+    background:var(--panel);color:var(--text);text-decoration:none;font-size:15px;letter-spacing:1px;}
+  .mobile-nav a:hover,.mobile-nav a:focus-visible{border-color:var(--green-bright);outline:none;
+    box-shadow:0 0 8px rgba(63,227,154,.35);}
+  .mobile-nav a .arrow{color:var(--green-bright);}
+  .mobile-nav a.reserved{border-style:dashed;border-color:#2a2a2a;color:var(--text-mute);pointer-events:none;}
+
+  @media (max-width:640px){
+    .board-wrap{display:none;}
+    .mobile-nav{display:block;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;}
+  }
+</style>
 </head>
 <body>
+  <h1 class="sr-only">Steven Selby — cyberskillscorner. Choose a section.</h1>
 
-    <header>
-        <h1>Steven Selby</h1>
-        <p class="tagline">Former Truck Driver &mdash; IT &amp; Cybersecurity Professional</p>
-    </header>
+  <div class="board-wrap">
+    <svg class="board" viewBox="0 0 720 560" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="navigation" aria-label="Site sections, laid out as a motherboard">
+      <defs>
+        <linearGradient id="rgb" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#ff3b3b"/><stop offset="18%" stop-color="#ff9e2c"/><stop offset="36%" stop-color="#f5e63d"/><stop offset="54%" stop-color="#3fe39a"/><stop offset="72%" stop-color="#37b6ff"/><stop offset="88%" stop-color="#7b6bff"/><stop offset="100%" stop-color="#e15bff"/>
+        </linearGradient>
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>
+      </defs>
 
-    <main>
+      <rect x="14" y="14" width="692" height="532" rx="14" fill="#000" stroke="#1a1a1a" stroke-width="1"/>
 
-        <div class="notice">
-            <strong>This site is being rebuilt.</strong> For additional information, visit
-            <a href="https://cyberskillscorner.xyz" target="_blank" rel="noopener">cyberskillscorner.xyz</a>.
-        </div>
+      <!-- structural detail (not interactive) -->
+      <rect x="236" y="18" width="36" height="16" rx="2" fill="#14181b"/><rect x="282" y="18" width="24" height="16" rx="2" fill="#14181b"/>
+      <rect x="266" y="26" width="216" height="58" rx="6" fill="#14181b" stroke="#23282c"/>
+      <rect x="150" y="504" width="300" height="12" rx="2" fill="#14181b"/>
+      <rect x="150" y="524" width="240" height="10" rx="2" fill="#14181b"/>
 
-        <section>
-            <h2>About</h2>
-            <p>
-                I spent nine years as a truck driver, covering local routes, long haul, and everything in between.
-                Now I'm making a full career change into IT and Cybersecurity, working toward a Bachelor of Science
-                in Cybersecurity &amp; Information Assurance.
-            </p>
-        </section>
+      <!-- traces -->
+      <g stroke="#163a28" stroke-width="1.5" fill="none">
+        <path d="M152 73 H210"/><path d="M432 180 H534"/><path d="M359 274 V306"/>
+        <path d="M315 344 V360"/><path d="M315 388 V410"/><path d="M602 304 V322 H604 V328"/>
+      </g>
+      <g stroke="#2bbd79" stroke-width="1.5" fill="none" opacity="0.5" stroke-dasharray="1 9" stroke-linecap="round">
+        <path d="M432 180 H534"/><path d="M359 274 V306"/><path d="M602 304 V322 H604 V328"/>
+      </g>
 
-        <section>
-            <h2>Certifications</h2>
-            <ul>
-                <li>CompTIA A+</li>
-                <li>IBM IT Support Professional</li>
-            </ul>
-            <div style="margin-top: 16px;">
-                <div data-iframe-width="150" data-iframe-height="270" data-share-badge-id="a50b16ab-ae53-453a-9261-a8be02d140e8" data-share-badge-host="https://www.credly.com"></div>
-                <script type="text/javascript" async src="//cdn.credly.com/assets/utilities/embed.js"></script>
-            </div>
-        </section>
+      <!-- Contact (rear I/O) -->
+      <a class="link" href="contact.html" aria-label="Contact">
+        <g>
+          <rect class="panel" x="32" y="42" width="120" height="62" rx="6" fill="#0c0f12" stroke="#2bbd79" stroke-opacity="0.5"/>
+          <rect x="44" y="56" width="24" height="14" rx="2" fill="#1a2024"/><rect x="76" y="56" width="24" height="14" rx="2" fill="#1a2024"/><rect x="108" y="56" width="24" height="14" rx="2" fill="#1a2024"/>
+          <rect x="44" y="76" width="56" height="14" rx="2" fill="#1a2024"/>
+          <text class="lbl" x="92" y="122" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Contact</text>
+        </g>
+      </a>
 
-        <section>
-            <h2>Contact</h2>
-            <ul>
-                <li><a href="https://github.com/sjselby95" target="_blank" rel="noopener">GitHub</a></li>
-                <li><a href="https://www.linkedin.com/in/sjselby95" target="_blank" rel="noopener">LinkedIn</a></li>
-            </ul>
-        </section>
+      <!-- Name plate (the heatsink that wears MSI's logo on the real board) -->
+      <rect x="40" y="124" width="168" height="140" rx="6" fill="#1c2024" stroke="#33373b"/>
+      <line x1="58" y1="144" x2="100" y2="144" stroke="#3a4045" stroke-width="3"/>
+      <line x1="58" y1="246" x2="100" y2="246" stroke="#3a4045" stroke-width="3"/>
+      <text x="124" y="198" fill="#9aa6a0" font-size="14" font-weight="500" text-anchor="middle" letter-spacing="2">STEVEN SELBY</text>
 
-    </main>
+      <!-- CPU = About (headshot placeholder + title) -->
+      <a class="link" href="about.html" aria-label="About — IT Help Desk">
+        <g>
+          <rect class="panel" x="286" y="128" width="146" height="146" rx="6" fill="#0a0d0f" stroke="#2bbd79" stroke-opacity="0.6"/>
+          <!-- TODO: swap this glyph for Steven's headshot (clip a circle, 96x96 min) -->
+          <circle cx="359" cy="174" r="24" fill="#10171a" stroke="#2a3a33"/>
+          <circle cx="359" cy="166" r="8" fill="#33403a"/><path d="M345 192 Q359 178 373 192" fill="#33403a"/>
+          <text class="lbl" x="359" y="230" fill="#f2faf6" font-size="14" font-weight="500" text-anchor="middle">IT Help Desk</text>
+          <text x="359" y="250" fill="#3fe39a" font-size="9.5" text-anchor="middle" letter-spacing="1.5">TAP → ABOUT</text>
+        </g>
+      </a>
 
-    <footer>
-        <a href="https://xkcd.com/538/" target="_blank" rel="noopener">
-            <img src="https://imgs.xkcd.com/comics/security.png" alt="xkcd 538: Security" title="Security">
-        </a>
-        <p>&copy; 2026 Steven Selby</p>
-    </footer>
+      <!-- RAM = Certifications (placeholder mapping — change href when the RAM page is decided) -->
+      <a class="link" href="certifications.html" aria-label="Certifications">
+        <g>
+          <rect class="panel" x="534" y="82" width="150" height="222" rx="6" fill="none" stroke="#2bbd79" stroke-opacity="0.4"/>
+          <rect x="542" y="90" width="24" height="206" rx="3" fill="#0c0f12" stroke="#26402f"/>
+          <rect x="572" y="90" width="24" height="206" rx="3" fill="#0a0c0e" stroke="#1a1d20"/>
+          <rect x="602" y="90" width="24" height="206" rx="3" fill="#0c0f12" stroke="#26402f"/>
+          <rect x="632" y="90" width="24" height="206" rx="3" fill="#0a0c0e" stroke="#1a1d20"/>
+          <!-- Corsair Vengeance RGB, slots 1 and 3, frozen rainbow (animation saved for later) -->
+          <rect x="540" y="84" width="28" height="10" rx="3" fill="url(#rgb)" filter="url(#glow)"/><rect x="540" y="85" width="28" height="8" rx="3" fill="url(#rgb)"/>
+          <rect x="600" y="84" width="28" height="10" rx="3" fill="url(#rgb)" filter="url(#glow)"/><rect x="600" y="85" width="28" height="8" rx="3" fill="url(#rgb)"/>
+          <text class="lbl" x="510" y="200" fill="#9fb8ad" font-size="12" font-weight="500" text-anchor="middle" transform="rotate(-90, 510, 200)">Certifications</text>
+        </g>
+      </a>
 
+      <!-- Projects = shielded M.2 -->
+      <a class="link" href="projects.html" aria-label="Projects">
+        <g>
+          <rect class="panel" x="210" y="306" width="290" height="38" rx="5" fill="#0c0f12" stroke="#2bbd79" stroke-opacity="0.5"/>
+          <circle cx="226" cy="325" r="4" fill="#2a2e32"/><circle cx="484" cy="325" r="4" fill="#2a2e32"/>
+          <text class="lbl" x="355" y="330" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Projects</text>
+        </g>
+      </a>
+
+      <!-- PCIe x16 — open, reserved for the GPU (not a link yet) -->
+      <g>
+        <rect x="150" y="360" width="330" height="28" rx="4" fill="#08090b" stroke="#2a2a2a" stroke-dasharray="4 4"/>
+        <text x="315" y="378" fill="#4a564f" font-size="12" text-anchor="middle" letter-spacing="1">PCIe ×16 — open · reserved for GPU</text>
+      </g>
+
+      <!-- Labs = exposed M.2 -->
+      <a class="link" href="labs.html" aria-label="Labs">
+        <g>
+          <rect class="panel" x="180" y="410" width="300" height="26" rx="4" fill="#0a0d0f" stroke="#3fe39a" stroke-width="1.3"/>
+          <rect x="450" y="416" width="22" height="14" rx="2" fill="#102a1e"/>
+          <text class="lbl" x="320" y="427" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Labs</text>
+        </g>
+      </a>
+
+      <!-- CMOS battery = hidden terminal easter egg -->
+      <a class="link egg" href="terminal.html" aria-label="">
+        <g>
+          <circle class="panel" cx="72" cy="470" r="15" fill="#0c0f12" stroke="#26402f"/>
+          <circle cx="72" cy="470" r="5" fill="#11160f" stroke="#3fe39a" stroke-opacity="0.4"/>
+        </g>
+      </a>
+
+      <!-- Photography = chipset zone, four-tile preview -->
+      <a class="link" href="photography.html" aria-label="Photography">
+        <g>
+          <rect class="panel" x="512" y="328" width="186" height="202" rx="10" fill="#0a0d0f" stroke="#2bbd79" stroke-opacity="0.45"/>
+          <text class="lbl" x="605" y="348" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Photography</text>
+          <!-- TODO: replace each tile fill with a real thumbnail (image or pattern) -->
+          <rect x="524" y="356" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
+          <circle cx="578" cy="376" r="6" fill="#2f4a3c"/><polygon points="528,426 548,398 566,416 582,400 600,426" fill="#1b2a24"/>
+          <rect x="608" y="356" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
+          <circle cx="662" cy="376" r="6" fill="#2f4a3c"/><polygon points="612,426 632,398 650,416 666,400 684,426" fill="#1b2a24"/>
+          <rect x="524" y="438" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
+          <circle cx="578" cy="458" r="6" fill="#2f4a3c"/><polygon points="528,508 548,480 566,498 582,482 600,508" fill="#1b2a24"/>
+          <rect x="608" y="438" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
+          <circle cx="662" cy="458" r="6" fill="#2f4a3c"/><polygon points="612,508 632,480 650,498 666,482 684,508" fill="#1b2a24"/>
+        </g>
+      </a>
+    </svg>
+  </div>
+
+  <!-- phones get a readable stacked nav instead of a tiny board -->
+  <nav class="mobile-nav" aria-label="Site sections">
+    <div class="id">
+      <div class="name">STEVEN SELBY</div>
+      <div class="title">IT Help Desk</div>
+    </div>
+    <a href="about.html">About <span class="arrow">→</span></a>
+    <a href="certifications.html">Certifications <span class="arrow">→</span></a>
+    <a href="projects.html">Projects <span class="arrow">→</span></a>
+    <a href="labs.html">Labs <span class="arrow">→</span></a>
+    <a href="photography.html">Photography <span class="arrow">→</span></a>
+    <a href="contact.html">Contact <span class="arrow">→</span></a>
+    <a class="reserved" href="#">PCIe ×16 — reserved for GPU</a>
+  </nav>
+
+  <footer>cyberskillscorner.xyz</footer>
 </body>
 </html>
