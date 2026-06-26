@@ -41,6 +41,31 @@
         <clipPath id="ram3-clip"><rect x="602" y="90" width="24" height="206" rx="3"/></clipPath>
         <clipPath id="headshot-clip"><circle cx="359" cy="174" r="24"/></clipPath>
         <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>
+        <!-- photo tile thumbnail gradients -->
+        <linearGradient id="photo-tile-1" x1="524" y1="356" x2="524" y2="430" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#1a0e2e"/>
+          <stop offset="45%"  stop-color="#8c2e00"/>
+          <stop offset="70%"  stop-color="#d45000"/>
+          <stop offset="100%" stop-color="#050202"/>
+        </linearGradient>
+        <linearGradient id="photo-tile-2" x1="608" y1="356" x2="608" y2="430" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#050a1a"/>
+          <stop offset="40%"  stop-color="#0d2a5c"/>
+          <stop offset="75%"  stop-color="#1a4e80"/>
+          <stop offset="100%" stop-color="#050710"/>
+        </linearGradient>
+        <linearGradient id="photo-tile-3" x1="524" y1="438" x2="524" y2="512" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#0a1518"/>
+          <stop offset="30%"  stop-color="#0f2b1a"/>
+          <stop offset="70%"  stop-color="#091a0e"/>
+          <stop offset="100%" stop-color="#040a06"/>
+        </linearGradient>
+        <linearGradient id="photo-tile-4" x1="608" y1="438" x2="608" y2="512" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#1a100a"/>
+          <stop offset="35%"  stop-color="#8b5500"/>
+          <stop offset="65%"  stop-color="#c48000"/>
+          <stop offset="100%" stop-color="#030202"/>
+        </linearGradient>
       </defs>
 
       <rect x="14" y="14" width="692" height="532" rx="14" fill="#000" stroke="#1a1a1a" stroke-width="1"/>
@@ -146,15 +171,14 @@
         <g>
           <rect class="panel" x="512" y="328" width="186" height="202" rx="10" fill="#0a0d0f" stroke="#2bbd79" stroke-opacity="0.45"/>
           <text class="lbl" x="605" y="348" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Photography</text>
-          <!-- TODO: replace each tile fill with a real thumbnail (image or pattern) -->
-          <rect x="524" y="356" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
-          <circle cx="578" cy="376" r="6" fill="#2f4a3c"/><polygon points="528,426 548,398 566,416 582,400 600,426" fill="#1b2a24"/>
-          <rect x="608" y="356" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
-          <circle cx="662" cy="376" r="6" fill="#2f4a3c"/><polygon points="612,426 632,398 650,416 666,400 684,426" fill="#1b2a24"/>
-          <rect x="524" y="438" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
-          <circle cx="578" cy="458" r="6" fill="#2f4a3c"/><polygon points="528,508 548,480 566,498 582,482 600,508" fill="#1b2a24"/>
-          <rect x="608" y="438" width="76" height="74" rx="4" fill="#10171a" stroke="#233028"/>
-          <circle cx="662" cy="458" r="6" fill="#2f4a3c"/><polygon points="612,508 632,480 650,498 666,482 684,508" fill="#1b2a24"/>
+          <rect x="524" y="356" width="76" height="74" rx="4" fill="url(#photo-tile-1)" stroke="#5a3020"/>
+          <circle cx="578" cy="376" r="6" fill="#f5a623"/><polygon points="528,426 548,398 566,416 582,400 600,426" fill="#100605"/>
+          <rect x="608" y="356" width="76" height="74" rx="4" fill="url(#photo-tile-2)" stroke="#1a3050"/>
+          <circle cx="662" cy="376" r="6" fill="#c8dff0"/><polygon points="612,426 632,398 650,416 666,400 684,426" fill="#050a14"/>
+          <rect x="524" y="438" width="76" height="74" rx="4" fill="url(#photo-tile-3)" stroke="#1a3520"/>
+          <circle cx="578" cy="458" r="6" fill="#7ec8a0"/><polygon points="528,508 548,480 566,498 582,482 600,508" fill="#051209"/>
+          <rect x="608" y="438" width="76" height="74" rx="4" fill="url(#photo-tile-4)" stroke="#5a4010"/>
+          <circle cx="662" cy="458" r="6" fill="#ffd166"/><polygon points="612,508 632,480 650,498 666,482 684,508" fill="#0f0800"/>
         </g>
       </a>
     </svg>
