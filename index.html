@@ -163,7 +163,7 @@
   <!-- phones get a readable stacked nav instead of a tiny board -->
   <nav class="mobile-nav" aria-label="Site sections">
     <div class="id">
-      <img class="avatar" src="headshot.jpg" alt="Steven Selby" />
+      <img class="avatar" src="headshot.jpg" alt="Steven Selby" onclick="document.getElementById('lightbox').classList.add('open')" />
       <div class="name">STEVEN SELBY</div>
       <div class="title">IT Help Desk</div>
     </div>
@@ -175,6 +175,11 @@
     <a href="contact.html">Contact <span class="arrow">→</span></a>
     <a class="reserved" href="#">PCIe ×16 — reserved for GPU</a>
   </nav>
+
+  <div id="lightbox" onclick="this.classList.remove('open')">
+    <img src="headshot.jpg" alt="Steven Selby" />
+    <button class="lb-close" onclick="document.getElementById('lightbox').classList.remove('open')" aria-label="Close">&times;</button>
+  </div>
 
   <footer>cyberskillscorner.xyz</footer>
   <script>

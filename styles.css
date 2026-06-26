@@ -122,6 +122,39 @@ footer {
   pointer-events: none;
 }
 
+/* Lightbox */
+#lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+}
+#lightbox.open {
+  display: flex;
+}
+#lightbox img {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 8px;
+  border: 2px solid var(--green);
+  object-fit: contain;
+}
+.lb-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.lb-close:hover { color: var(--green-bright); }
+
 @media (max-width: 640px) {
   .board-wrap { display: none; }
   .mobile-nav { display: block; }
