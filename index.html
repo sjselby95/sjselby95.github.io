@@ -25,6 +25,7 @@
         </linearGradient>
         <clipPath id="ram1-clip"><rect x="542" y="90" width="24" height="206" rx="3"/></clipPath>
         <clipPath id="ram3-clip"><rect x="602" y="90" width="24" height="206" rx="3"/></clipPath>
+        <clipPath id="headshot-clip"><circle cx="359" cy="174" r="24"/></clipPath>
         <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>
       </defs>
 
@@ -66,9 +67,7 @@
       <a class="link" href="about.html" aria-label="About — IT Help Desk">
         <g>
           <rect class="panel" x="286" y="128" width="146" height="146" rx="6" fill="#0a0d0f" stroke="#2bbd79" stroke-opacity="0.6"/>
-          <!-- TODO: swap this glyph for Steven's headshot (clip a circle, 96x96 min) -->
-          <circle cx="359" cy="174" r="24" fill="#10171a" stroke="#2a3a33"/>
-          <circle cx="359" cy="166" r="8" fill="#33403a"/><path d="M345 192 Q359 178 373 192" fill="#33403a"/>
+          <image href="headshot.jpg" x="335" y="150" width="48" height="48" clip-path="url(#headshot-clip)" preserveAspectRatio="xMidYMid slice"/>
           <text class="lbl" x="359" y="230" fill="#f2faf6" font-size="14" font-weight="500" text-anchor="middle">IT Help Desk</text>
           <text x="359" y="250" fill="#3fe39a" font-size="9.5" text-anchor="middle" letter-spacing="1.5">TAP → ABOUT</text>
         </g>
