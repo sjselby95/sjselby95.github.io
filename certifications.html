@@ -194,6 +194,18 @@
     justify-content: center;
   }
 
+  a.chip {
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  a.chip:hover, a.chip:focus-visible {
+    border-color: var(--green-bright);
+    box-shadow: 0 0 10px rgba(63, 227, 154, .25);
+    outline: none;
+  }
+  a.chip:hover .chip-name, a.chip:focus-visible .chip-name { color: var(--green-bright); }
+
   /* Credly badge override — center it */
   .badge-wrap {
     display: flex;
@@ -280,21 +292,21 @@
   <div class="grid-area">
     <div class="chip-grid">
 
-      <div class="chip passed">
+      <a class="chip passed" href="https://www.credly.com/badges/a50b16ab-ae53-453a-9261-a8be02d140e8/public_url" target="_blank" rel="noopener" aria-label="CompTIA A+ badge on Credly">
         <span class="slot-id">U1</span>
         <span class="indicator"></span>
         <div class="chip-name">A+</div>
         <div class="chip-sub">CompTIA</div>
         <div class="pill passed">PASSED &middot; 806</div>
-      </div>
+      </a>
 
-      <div class="chip passed">
+      <a class="chip passed" href="https://www.credly.com/badges/63006d37-87cc-4e2d-a1f0-38e93fe24df2/public_url" target="_blank" rel="noopener" aria-label="IBM IT Support Professional badge on Credly">
         <span class="slot-id">U2</span>
         <span class="indicator"></span>
         <div class="chip-name">IT Support<br>Professional</div>
         <div class="chip-sub">IBM</div>
         <div class="pill passed">PASSED</div>
-      </div>
+      </a>
 
       <div class="chip open">
         <span class="slot-id">U3</span>
