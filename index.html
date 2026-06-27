@@ -41,6 +41,20 @@
         <clipPath id="ram3-clip"><rect x="602" y="90" width="24" height="206" rx="3"/></clipPath>
         <clipPath id="headshot-clip"><circle cx="359" cy="174" r="24"/></clipPath>
         <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>
+        <filter id="cpu-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <linearGradient id="cpu-halo" gradientUnits="userSpaceOnUse" x1="432" y1="201" x2="286" y2="201">
+          <stop offset="0%"   stop-color="#ff3b3b"/>
+          <stop offset="16%"  stop-color="#ff9e2c"/>
+          <stop offset="33%"  stop-color="#f5e63d"/>
+          <stop offset="50%"  stop-color="#3fe39a"/>
+          <stop offset="66%"  stop-color="#37b6ff"/>
+          <stop offset="83%"  stop-color="#7b6bff"/>
+          <stop offset="100%" stop-color="#ff3b3b"/>
+          <animateTransform attributeName="gradientTransform" type="rotate" from="0 359 201" to="360 359 201" dur="3.3s" repeatCount="indefinite"/>
+        </linearGradient>
       </defs>
 
       <rect x="14" y="14" width="692" height="532" rx="14" fill="#000" stroke="#1a1a1a" stroke-width="1"/>
@@ -80,6 +94,7 @@
       <!-- CPU = About (headshot placeholder + title) -->
       <a class="link" href="about.html" aria-label="About — IT Help Desk">
         <g>
+          <rect x="283" y="125" width="152" height="152" rx="8" fill="none" stroke="url(#cpu-halo)" stroke-width="2.5" filter="url(#cpu-glow)"/>
           <rect class="panel" x="286" y="128" width="146" height="146" rx="6" fill="#0a0d0f" stroke="#2bbd79" stroke-opacity="0.6"/>
           <image href="headshot.jpg" x="317" y="132" width="84" height="84" clip-path="url(#headshot-clip)" preserveAspectRatio="xMidYMid slice"/>
           <text class="lbl" x="359" y="230" fill="#f2faf6" font-size="14" font-weight="500" text-anchor="middle">IT Help Desk</text>
