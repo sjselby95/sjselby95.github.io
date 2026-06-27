@@ -74,7 +74,18 @@
   /* RGB diffuser */
   .diffuser {
     height: 4px;
-    background: linear-gradient(to right, #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff);
+    background: linear-gradient(to right,
+      #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff,
+      #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff,
+      #ff3b3b
+    );
+    background-size: 200% 100%;
+    animation: rgb-flow 8s linear infinite;
+  }
+
+  @keyframes rgb-flow {
+    0%   { background-position: 0% 0; }
+    100% { background-position: -100% 0; }
   }
 
   /* Header */
