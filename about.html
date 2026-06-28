@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About — Steven Selby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%232bbd79%22 stroke-width=%221%22/></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold:       #c9a24a;
+    --gold-hi:    #e0bc6a;
+    --gold-dim:   #7a601a;
+    --frame:      #1c1420;
+    --frame-edge: #2e2030;
+    --die:        #07080b;
+    --die-block:  rgba(255,255,255,0.018);
+    --green:      #2bbd79;
+    --green-bright: #3fe39a;
+    --text:       #f0f4f8;
+    --text-soft:  #8aaa9a;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  html, body {
+    min-height: 100vh;
+    background: #030304;
+    color: var(--text);
+    font-family: var(--mono);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ── Back link ── */
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 20px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--gold-dim);
+    text-decoration: none;
+    transition: color .2s;
+    z-index: 10;
+  }
+  .back:hover { color: var(--gold); }
+
+  /* ── Chip outer frame ── */
+  .chip-frame {
+    position: relative;
+    width: min(88vw, 720px);
+    background: var(--frame);
+    border: 2px solid var(--frame-edge);
+    border-radius: 10px;
+    padding: 38px;
+  }
+
+  /* ── Bond wire pads ── */
+  .pads {
+    position: absolute;
+    pointer-events: none;
+  }
+  .pads-top, .pads-bottom {
+    left: 48px;
+    right: 48px;
+    height: 16px;
+    background: repeating-linear-gradient(
+      to right,
+      var(--gold) 0px,
+      var(--gold) 9px,
+      transparent 9px,
+      transparent 15px
+    );
+    border-radius: 1px;
+  }
+  .pads-top    { top: 12px; }
+  .pads-bottom { bottom: 12px; }
+
+  .pads-left, .pads-right {
+    top: 48px;
+    bottom: 48px;
+    width: 16px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--gold) 0px,
+      var(--gold) 9px,
+      transparent 9px,
+      transparent 15px
+    );
+    border-radius: 1px;
+  }
+  .pads-left  { left: 12px; }
+  .pads-right { right: 12px; }
+
+  /* ── Corner brackets ── */
+  .corner {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+  }
+  .corner-tl { top: 8px;    left: 8px;    border-top: 3px solid var(--gold);  border-left: 3px solid var(--gold); }
+  .corner-tr { top: 8px;    right: 8px;   border-top: 3px solid var(--gold);  border-right: 3px solid var(--gold); }
+  .corner-bl { bottom: 8px; left: 8px;    border-bottom: 3px solid var(--gold); border-left: 3px solid var(--gold); }
+  .corner-br { bottom: 8px; right: 8px;   border-bottom: 3px solid var(--gold); border-right: 3px solid var(--gold); }
+
+  /* ── Die inner area ── */
+  .die-area {
+    background: var(--die);
+    border: 1px solid #1a1a22;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    min-height: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Subtle grid — suggests die block structure */
+  .die-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--die-block) 1px, transparent 1px),
+      linear-gradient(90deg, var(--die-block) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  /* Faint colored block zones — referencing the iridescent die blocks in the photo */
+  .die-area::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 40% 30% at 20% 25%,  rgba(63,227,154,0.03) 0%, transparent 100%),
+      radial-gradient(ellipse 30% 25% at 75% 20%,  rgba(55,182,255,0.03) 0%, transparent 100%),
+      radial-gradient(ellipse 35% 20% at 80% 70%,  rgba(123,107,255,0.03) 0%, transparent 100%),
+      radial-gradient(ellipse 25% 30% at 15% 75%,  rgba(229,91,255,0.025) 0%, transparent 100%),
+      radial-gradient(ellipse 20% 20% at 50% 80%,  rgba(255,158,44,0.025) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* ── Die content ── */
+  .die-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 48px 32px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .die-name {
+    font-family: "Russo One", var(--mono);
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--text);
+  }
+
+  .die-photo {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center top;
+    border: 2px solid var(--green);
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+    margin: 8px 0;
+  }
+  .die-photo:hover {
+    border-color: var(--green-bright);
+    box-shadow: 0 0 14px rgba(63,227,154,0.4);
+  }
+
+  .die-title {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--text-soft);
+  }
+
+  .die-email {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--gold-dim);
+  }
+
+  /* About text area — blank for now */
+  .die-about {
+    margin-top: 28px;
+    width: 100%;
+    max-width: 480px;
+    min-height: 120px;
+    border-top: 1px solid #1e1e28;
+    padding-top: 24px;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text-soft);
+    text-align: left;
+  }
+
+  /* ── Lightbox ── */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 8px;
+    border: 2px solid var(--green);
+    object-fit: contain;
+  }
+  .lb-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .lb-close:hover { color: var(--green-bright); }
+
+  /* ── Mobile ── */
+  @media (max-width: 540px) {
+    .chip-frame { padding: 28px; }
+    .die-name { font-size: 16px; letter-spacing: 2px; }
+    .pads-top, .pads-bottom { left: 36px; right: 36px; }
+    .pads-left, .pads-right { top: 36px; bottom: 36px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html">&#8592; HOME</a>
+
+<div class="chip-frame">
+  <!-- Bond pads -->
+  <div class="pads pads-top"></div>
+  <div class="pads pads-bottom"></div>
+  <div class="pads pads-left"></div>
+  <div class="pads pads-right"></div>
+
+  <!-- Corner brackets -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <!-- Die area -->
+  <div class="die-area">
+    <div class="die-content">
+      <div class="die-name">STEVEN SELBY</div>
+      <img class="die-photo" src="headshot.jpg" alt="Steven Selby"
+           onclick="document.getElementById('lightbox').classList.add('open')" />
+      <div class="die-title">IT HELP DESK</div>
+      <div class="die-email">sjselby95@gmail.com</div>
+      <div class="die-about"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="this.classList.remove('open')">
+  <img src="headshot.jpg" alt="Steven Selby" />
+  <button class="lb-close" onclick="document.getElementById('lightbox').classList.remove('open')" aria-label="Close">&times;</button>
+</div>
+
+</body>
+</html>
