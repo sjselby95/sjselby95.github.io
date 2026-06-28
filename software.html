@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Software — BIOS Setup Utility</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%232bbd79%22 stroke-width=%221%22/></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:          #07090f;
+    --header:      #0b0f1c;
+    --panel:       #0e1422;
+    --panel2:      #111a2e;
+    --border:      #1c2a42;
+    --border-hi:   #2a4060;
+    --red:         #c41e1e;
+    --red-dim:     #6e1111;
+    --sel:         #0f2040;
+    --sel-border:  #2563eb;
+    --text:        #ccdaee;
+    --text-soft:   #6a8aaa;
+    --text-dim:    #2e4060;
+    --green:       #22c55e;
+    --amber:       #f59e0b;
+    --mono: "JetBrains Mono", "Courier New", monospace;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    height: 100%;
+    min-height: 100vh;
+  }
+
+  .bios-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-height: 600px;
+  }
+
+  /* ── Top header bar ── */
+  .bios-header {
+    background: var(--header);
+    border-bottom: 2px solid var(--red);
+    display: flex;
+    align-items: stretch;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .bios-logo {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-right: 1px solid var(--border);
+    gap: 10px;
+    min-width: 160px;
+  }
+  .bios-logo .dragon {
+    color: var(--red);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .bios-logo .brand {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+  .bios-logo .brand span {
+    color: var(--red);
+  }
+
+  .bios-tabs {
+    display: flex;
+    align-items: stretch;
+    flex: 1;
+  }
+  .bios-tab {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-soft);
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    text-decoration: none;
+    user-select: none;
+  }
+  .bios-tab:hover { background: var(--panel2); color: var(--text); }
+  .bios-tab.active {
+    background: var(--sel);
+    color: var(--text);
+    border-bottom: 2px solid var(--sel-border);
+    margin-bottom: -2px;
+  }
+  .bios-tab.exit {
+    color: var(--red);
+    margin-left: auto;
+    border-left: 1px solid var(--border);
+    border-right: none;
+  }
+  .bios-tab.exit:hover { background: #1a0808; color: #ff4444; }
+
+  .bios-clock {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 11px;
+    color: var(--text-soft);
+    border-left: 1px solid var(--border);
+    gap: 14px;
+    white-space: nowrap;
+  }
+
+  /* ── System summary bar ── */
+  .bios-summary {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 6px 20px;
+    gap: 32px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .summary-item { display: flex; flex-direction: column; gap: 1px; }
+  .summary-label { font-size: 9px; letter-spacing: 1.5px; color: var(--text-dim); }
+  .summary-value { font-size: 11px; color: var(--text-soft); letter-spacing: 0.5px; }
+  .summary-value.green { color: var(--green); }
+  .summary-value.amber { color: var(--amber); }
+
+  /* ── Main body ── */
+  .bios-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Left sidebar ── */
+  .bios-sidebar {
+    width: 200px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    padding: 0 14px 6px;
+  }
+  .sidebar-item {
+    padding: 7px 14px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--text-soft);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background .12s, color .12s;
+    user-select: none;
+  }
+  .sidebar-item:hover { background: var(--panel2); color: var(--text); }
+  .sidebar-item.active {
+    background: var(--sel);
+    color: var(--text);
+    border-left: 2px solid var(--sel-border);
+    padding-left: 12px;
+  }
+  .sidebar-item .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .sidebar-item.active .dot { background: var(--sel-border); }
+
+  /* ── Main content panel ── */
+  .bios-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .content-section { display: none; }
+  .content-section.active { display: block; }
+
+  .content-header {
+    background: var(--panel2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .content-header h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+  .content-header p {
+    font-size: 10px;
+    color: var(--text-soft);
+    letter-spacing: 1px;
+  }
+
+  /* Settings table */
+  .settings-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .settings-table tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+    cursor: default;
+  }
+  .settings-table tr:hover { background: var(--panel2); }
+  .settings-table td {
+    padding: 10px 24px;
+    font-size: 11px;
+  }
+  .settings-table td:first-child {
+    color: var(--text-soft);
+    width: 45%;
+    letter-spacing: 0.5px;
+  }
+  .settings-table td:last-child {
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .settings-table .section-row td {
+    background: var(--panel);
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 6px 24px;
+  }
+  .settings-table .section-row:hover { background: var(--panel); }
+
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: 8px;
+  }
+  .tag.installed { background: #0c2a18; border: 1px solid #1a5c30; color: var(--green); }
+  .tag.learning  { background: #2a1a08; border: 1px solid #5c3a10; color: var(--amber); }
+  .tag.planned   { background: #0e1422; border: 1px solid var(--border); color: var(--text-dim); }
+
+  .placeholder-row td { color: var(--text-dim) !important; font-style: italic; }
+
+  /* ── Right info panel ── */
+  .bios-info {
+    width: 220px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .info-block {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-block .info-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .info-block p {
+    font-size: 10px;
+    color: var(--text-soft);
+    line-height: 1.7;
+    letter-spacing: 0.3px;
+  }
+  .info-block .info-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-soft);
+  }
+  .info-block .info-item:last-child { border-bottom: none; }
+  .info-block .info-item span:last-child { color: var(--text); }
+
+  /* ── Bottom function bar ── */
+  .bios-footer {
+    background: var(--header);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 32px;
+    gap: 20px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    overflow: hidden;
+  }
+  .fn-key {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-soft);
+  }
+  .fn-key .key {
+    background: var(--panel2);
+    border: 1px solid var(--border-hi);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 9px;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Scrollbars ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--panel); }
+  ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+
+  /* ── Mobile fallback ── */
+  @media (max-width: 700px) {
+    .bios-info { display: none; }
+    .bios-sidebar { width: 140px; }
+    .bios-clock { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bios-wrap">
+
+  <!-- Header -->
+  <div class="bios-header">
+    <div class="bios-logo">
+      <div class="dragon">&#9670;</div>
+      <div class="brand"><span>MSI</span> BIOS</div>
+    </div>
+    <div class="bios-tabs">
+      <div class="bios-tab active" onclick="switchTab('settings')">SETTINGS</div>
+      <div class="bios-tab" onclick="switchTab('security')">SECURITY</div>
+      <div class="bios-tab" onclick="switchTab('development')">DEVELOPMENT</div>
+      <div class="bios-tab" onclick="switchTab('network')">NETWORK</div>
+      <div class="bios-tab" onclick="switchTab('system')">SYSTEM</div>
+      <a class="bios-tab exit" href="index.html">SAVE &amp; EXIT &nbsp;&#10006;</a>
+    </div>
+    <div class="bios-clock">
+      <span id="bios-time">--:--:--</span>
+      <span id="bios-date">----/--/--</span>
+    </div>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="bios-summary">
+    <div class="summary-item">
+      <div class="summary-label">SYSTEM</div>
+      <div class="summary-value">cyberskillscorner</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">VERSION</div>
+      <div class="summary-value">1.0</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">BUILD DATE</div>
+      <div class="summary-value" id="bios-builddate">2026/06/27</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">STATUS</div>
+      <div class="summary-value green">OPERATIONAL</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">MODULES</div>
+      <div class="summary-value amber">POPULATING</div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="bios-body">
+
+    <!-- Sidebar -->
+    <div class="bios-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">CATEGORIES</div>
+        <div class="sidebar-item active" onclick="switchSidebar(this, 'all')"><span class="dot"></span>All Software</div>
+        <div class="sidebar-item" onclick="switchSidebar(this, 'installed')"><span class="dot"></span>Installed</div>
+        <div class="sidebar-item" onclick="switchSidebar(this, 'learning')"><span class="dot"></span>Learning</div>
+        <div class="sidebar-item" onclick="switchSidebar(this, 'planned')"><span class="dot"></span>Planned</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">QUICK NAV</div>
+        <div class="sidebar-item" onclick="switchTab('settings')"><span class="dot"></span>Settings</div>
+        <div class="sidebar-item" onclick="switchTab('security')"><span class="dot"></span>Security</div>
+        <div class="sidebar-item" onclick="switchTab('development')"><span class="dot"></span>Development</div>
+        <div class="sidebar-item" onclick="switchTab('network')"><span class="dot"></span>Network</div>
+        <div class="sidebar-item" onclick="switchTab('system')"><span class="dot"></span>System</div>
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div class="bios-content">
+
+      <!-- SETTINGS tab -->
+      <div class="content-section active" id="tab-settings">
+        <div class="content-header">
+          <h2>SETTINGS</h2>
+          <p>General software configuration</p>
+        </div>
+        <table class="settings-table">
+          <tr class="section-row"><td colspan="2">GENERAL</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">PRODUCTIVITY</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">OPERATING SYSTEM</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+        </table>
+      </div>
+
+      <!-- SECURITY tab -->
+      <div class="content-section" id="tab-security">
+        <div class="content-header">
+          <h2>SECURITY</h2>
+          <p>Security tools &amp; applications</p>
+        </div>
+        <table class="settings-table">
+          <tr class="section-row"><td colspan="2">ANALYSIS</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">SCANNING</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">PLATFORMS</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+        </table>
+      </div>
+
+      <!-- DEVELOPMENT tab -->
+      <div class="content-section" id="tab-development">
+        <div class="content-header">
+          <h2>DEVELOPMENT</h2>
+          <p>Development tools &amp; environments</p>
+        </div>
+        <table class="settings-table">
+          <tr class="section-row"><td colspan="2">EDITORS</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">VERSION CONTROL</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">LANGUAGES</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+        </table>
+      </div>
+
+      <!-- NETWORK tab -->
+      <div class="content-section" id="tab-network">
+        <div class="content-header">
+          <h2>NETWORK</h2>
+          <p>Network tools &amp; utilities</p>
+        </div>
+        <table class="settings-table">
+          <tr class="section-row"><td colspan="2">MONITORING</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">UTILITIES</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+        </table>
+      </div>
+
+      <!-- SYSTEM tab -->
+      <div class="content-section" id="tab-system">
+        <div class="content-header">
+          <h2>SYSTEM</h2>
+          <p>Virtualization &amp; system tools</p>
+        </div>
+        <table class="settings-table">
+          <tr class="section-row"><td colspan="2">VIRTUALIZATION</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+          <tr class="section-row"><td colspan="2">SYSTEM TOOLS</td></tr>
+          <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Right info panel -->
+    <div class="bios-info">
+      <div class="info-block">
+        <div class="info-label">ABOUT THIS PAGE</div>
+        <p>Software tools, platforms, and applications used throughout Steven Selby's IT &amp; cybersecurity journey. Updated as skills grow.</p>
+      </div>
+      <div class="info-block">
+        <div class="info-label">KEY</div>
+        <div class="info-item"><span>INSTALLED</span><span style="color:var(--green)">&#9646; Active</span></div>
+        <div class="info-item"><span>LEARNING</span><span style="color:var(--amber)">&#9646; In progress</span></div>
+        <div class="info-item"><span>PLANNED</span><span style="color:var(--text-dim)">&#9646; Queued</span></div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">NAVIGATION</div>
+        <div class="info-item"><span>Tabs</span><span>Switch category</span></div>
+        <div class="info-item"><span>Save &amp; Exit</span><span>Home</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer function bar -->
+  <div class="bios-footer">
+    <div class="fn-key"><span class="key">F1</span> Help</div>
+    <div class="fn-key"><span class="key">F5</span> Previous Values</div>
+    <div class="fn-key"><span class="key">F9</span> Optimized Defaults</div>
+    <div class="fn-key"><span class="key">F10</span> Save &amp; Exit</div>
+    <div class="fn-key"><span class="key">ESC</span> Exit</div>
+    <div class="fn-key"><span class="key">↑↓</span> Select Item</div>
+    <div class="fn-key"><span class="key">Enter</span> Select</div>
+  </div>
+
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.bios-tab:not(.exit)').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    const tabEl = document.querySelector(`.bios-tab[onclick="switchTab('${name}')"]`);
+    if (tabEl) tabEl.classList.add('active');
+    const section = document.getElementById('tab-' + name);
+    if (section) section.classList.add('active');
+  }
+
+  function switchSidebar(el, filter) {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('bios-time').textContent =
+      `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    document.getElementById('bios-date').textContent =
+      `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' || e.key === 'F10') window.location.href = 'index.html';
+  });
+</script>
+
+</body>
+</html>
