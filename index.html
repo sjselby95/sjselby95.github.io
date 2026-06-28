@@ -167,11 +167,20 @@
         </g>
       </a>
 
-      <!-- CMOS battery = hidden terminal easter egg -->
+      <!-- CMOS battery = CR2032 coin cell easter egg -->
       <a class="link egg" href="terminal.html" aria-label="">
         <g>
-          <circle class="panel" cx="72" cy="470" r="15" fill="#0c0f12" stroke="#26402f"/>
-          <circle cx="72" cy="470" r="5" fill="#11160f" stroke="#3fe39a" stroke-opacity="0.4"/>
+          <!-- holder ring -->
+          <circle class="panel" cx="72" cy="470" r="22" fill="#1c1c1c" stroke="#3a3a3a" stroke-width="1.5"/>
+          <!-- battery face (silver) -->
+          <circle cx="72" cy="470" r="18" fill="#b2b4b4" stroke="#8a8c8c" stroke-width="0.75"/>
+          <!-- inner groove ring -->
+          <circle cx="72" cy="470" r="13" fill="#a4a6a6" stroke="#909292" stroke-width="0.5"/>
+          <!-- center positive terminal -->
+          <circle cx="72" cy="470" r="4.5" fill="#d0d2d2" stroke="#787a7a" stroke-width="0.75"/>
+          <!-- battery label text -->
+          <text x="72" y="467" fill="#1e1e1e" font-size="6" text-anchor="middle" letter-spacing="0.8" font-weight="600">CR2032</text>
+          <text x="72" y="476" fill="#1e1e1e" font-size="5" text-anchor="middle" letter-spacing="1">3V</text>
         </g>
       </a>
 
