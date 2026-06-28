@@ -91,6 +91,7 @@ footer {
   border: 2px solid var(--green);
   display: block;
   margin: 0 auto 10px;
+  cursor: pointer;
 }
 .mobile-nav .id .name { font-size: 18px; letter-spacing: 3px; color: var(--text); }
 .mobile-nav .id .title { font-size: 12px; letter-spacing: 2px; color: var(--text-soft); margin-top: 4px; }
