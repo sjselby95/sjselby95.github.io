@@ -363,7 +363,8 @@
       <div class="brand"><span>SELBY</span> BIOS</div>
     </div>
     <div class="bios-tabs">
-      <div class="bios-tab active" onclick="switchTab('settings')">SETTINGS</div>
+      <div class="bios-tab active" onclick="switchTab('all')">ALL</div>
+      <div class="bios-tab" onclick="switchTab('settings')">SETTINGS</div>
       <div class="bios-tab" onclick="switchTab('security')">SECURITY</div>
       <div class="bios-tab" onclick="switchTab('development')">DEVELOPMENT</div>
       <div class="bios-tab" onclick="switchTab('network')">NETWORK</div>
@@ -425,8 +426,27 @@
     <!-- Content area -->
     <div class="bios-content">
 
+      <!-- ALL tab -->
+      <div class="content-section active" id="tab-all">
+        <div class="content-header">
+          <h2>ALL SOFTWARE</h2>
+          <p>Complete software list</p>
+        </div>
+        <table class="settings-table">
+          <tr class="section-row"><td colspan="3">SOFTWARE</td></tr>
+          <thead style="background:var(--panel2);">
+            <tr>
+              <td style="color:var(--text-soft);font-size:9px;letter-spacing:2px;padding:6px 24px;">NAME</td>
+              <td style="color:var(--text-soft);font-size:9px;letter-spacing:2px;padding:6px 24px;">TYPE</td>
+              <td style="color:var(--text-soft);font-size:9px;letter-spacing:2px;padding:6px 24px;">STATUS</td>
+            </tr>
+          </thead>
+          <tr><td><img src="https://cdn.simpleicons.org/visualstudiocode/007ACC" width="14" height="14" style="vertical-align:middle;margin-right:8px;border-radius:2px;" alt="">Visual Studio Code</td><td style="color:var(--text-soft);">Development</td><td><span class="tag installed">INSTALLED</span></td></tr>
+        </table>
+      </div>
+
       <!-- SETTINGS tab -->
-      <div class="content-section active" id="tab-settings">
+      <div class="content-section" id="tab-settings">
         <div class="content-header">
           <h2>SETTINGS</h2>
           <p>General software configuration</p>
@@ -465,7 +485,7 @@
         </div>
         <table class="settings-table">
           <tr class="section-row"><td colspan="2">EDITORS</td></tr>
-          <tr><td>Visual Studio Code</td><td>VS Code <span class="tag installed">INSTALLED</span></td></tr>
+          <tr><td><img src="https://cdn.simpleicons.org/visualstudiocode/007ACC" width="14" height="14" style="vertical-align:middle;margin-right:8px;border-radius:2px;" alt="">Visual Studio Code</td><td>VS Code <span class="tag installed">INSTALLED</span></td></tr>
           <tr class="section-row"><td colspan="2">VERSION CONTROL</td></tr>
           <tr class="placeholder-row"><td>Item</td><td>— coming soon —</td></tr>
           <tr class="section-row"><td colspan="2">LANGUAGES</td></tr>
