@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Projects — Steven Selby</title>
+<meta name="description" content="Steven Selby's projects — hands-on builds and experiments in IT and cybersecurity." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%232bbd79%22 stroke-width=%221%22/></svg>">
+<style>
+  :root {
+    --bg:           #000;
+    --pcb:          #0b1a0f;
+    --pcb-edge:     #1a3a22;
+    --trace:        rgba(43,189,121,0.12);
+    --nand:         #0e1a10;
+    --nand-edge:    #1e3a22;
+    --controller:   #0c1610;
+    --green:        #2bbd79;
+    --green-bright: #3fe39a;
+    --green-dim:    #163a28;
+    --gold:         #c9a24a;
+    --gold-dim:     #7a601a;
+    --text:         #cfe9dd;
+    --text-soft:    #8aaa9a;
+    --text-mute:    #4a564f;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ── Back link ── */
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 20px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--gold-dim);
+    text-decoration: none;
+    transition: color .2s;
+    z-index: 10;
+  }
+  .back:hover { color: var(--gold); }
+
+  /* ── M.2 outer wrapper ── */
+  .m2-wrap {
+    width: 100%;
+    max-width: 860px;
+  }
+
+  /* ── M.2 board ── */
+  .m2-board {
+    position: relative;
+    background: var(--pcb);
+    border: 2px solid var(--pcb-edge);
+    border-radius: 6px 6px 6px 6px;
+    padding: 20px 100px 20px 20px; /* right padding leaves room for connector notch */
+    overflow: visible;
+  }
+
+  /* PCB trace lines — subtle grid feel */
+  .m2-board::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image:
+      linear-gradient(var(--trace) 1px, transparent 1px),
+      linear-gradient(90deg, var(--trace) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+  }
+
+  /* ── Connector notch (right edge) ── */
+  .m2-connector {
+    position: absolute;
+    right: -2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 90px;
+    height: 60%;
+    min-height: 80px;
+    background: var(--pcb);
+    border: 2px solid var(--pcb-edge);
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px 0;
+    overflow: hidden;
+  }
+
+  /* Gold contacts on connector */
+  .m2-connector::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--gold) 0px,
+      var(--gold) 7px,
+      transparent 7px,
+      transparent 11px
+    );
+  }
+
+  .connector-label {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--gold-dim);
+    white-space: nowrap;
+  }
+
+  /* ── NAND chip blocks (decorative) ── */
+  .nand-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nand-chip {
+    background: var(--nand);
+    border: 1px solid var(--nand-edge);
+    border-radius: 3px;
+    width: 48px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--text-mute);
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  /* tiny pin marks on NAND chips */
+  .nand-chip::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--nand-edge) 0px,
+      var(--nand-edge) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+  .nand-chip::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--nand-edge) 0px,
+      var(--nand-edge) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+
+  /* ── Controller chip ── */
+  .controller-chip {
+    background: var(--controller);
+    border: 1px solid #2a4a32;
+    border-radius: 3px;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--green-dim);
+    text-align: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    gap: 3px;
+  }
+  .controller-chip span { color: var(--green); font-size: 8px; }
+
+  /* ── Label sticker ── */
+  .m2-label {
+    background: #f0ede6;
+    border-radius: 4px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .label-brand {
+    font-family: "Russo One", var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #1a1a1a;
+    white-space: nowrap;
+  }
+  .label-model {
+    font-size: 9px;
+    color: #555;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .label-spec {
+    font-size: 8px;
+    color: #888;
+    letter-spacing: 0.5px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* ── Board interior layout ── */
+  .board-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .board-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── Project cards area ── */
+  .projects-section {
+    position: relative;
+    z-index: 1;
+    margin-top: 4px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-mute);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* Individual project card */
+  .project-card {
+    background: #080e09;
+    border: 1px solid var(--pcb-edge);
+    border-radius: 5px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .18s, box-shadow .18s;
+    position: relative;
+  }
+  .project-card:hover {
+    border-color: var(--green-bright);
+    box-shadow: 0 0 10px rgba(63,227,154,.18);
+  }
+  .project-card:hover .project-name { color: var(--green-bright); }
+
+  .project-card.open {
+    border-style: dashed;
+    border-color: #1a2a1e;
+    background: #060c07;
+    pointer-events: none;
+  }
+
+  .card-slot {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 9px;
+    color: var(--text-mute);
+    letter-spacing: 1px;
+  }
+
+  .card-status {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green-bright);
+  }
+  .project-card.open .card-status { display: none; }
+
+  .project-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-top: 12px;
+    transition: color .18s;
+  }
+  .project-card.open .project-name {
+    color: var(--text-mute);
+    font-size: 12px;
+    margin-top: 0;
+  }
+
+  .project-desc {
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.7;
+  }
+  .project-card.open .project-desc {
+    font-size: 10px;
+    color: #2a3a2e;
+  }
+
+  .project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .tag {
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 9px;
+    background: var(--green-dim);
+    border: 1px solid #1f5d3c;
+    color: var(--green-bright);
+  }
+  .tag.wip {
+    background: #2a1a08;
+    border-color: #5c3a10;
+    color: #e0a060;
+  }
+
+  /* ── Nav footer ── */
+  .m2-footer {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-around;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-mute);
+    padding: 8px 0;
+  }
+  .m2-footer a { color: var(--text-mute); text-decoration: none; }
+  .m2-footer a:hover { color: var(--green-bright); }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    .m2-board { padding: 16px 80px 16px 14px; }
+    .project-grid { grid-template-columns: 1fr; }
+    .nand-chip { width: 36px; height: 28px; font-size: 6px; }
+    .controller-chip { width: 42px; height: 42px; }
+    .label-spec { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html">&#8592; HOME</a>
+
+<div class="m2-wrap">
+  <div class="m2-board">
+
+    <!-- Connector notch -->
+    <div class="m2-connector">
+      <div class="connector-label">M KEY · PCIe 4.0 ×4</div>
+    </div>
+
+    <div class="board-inner">
+
+      <!-- Top row: NAND chips + controller + label sticker -->
+      <div class="board-top">
+        <!-- NAND packages -->
+        <div class="nand-chip">NAND</div>
+        <div class="nand-chip">NAND</div>
+
+        <!-- Controller -->
+        <div class="controller-chip">
+          <span>CTRL</span>
+          NVMe
+        </div>
+
+        <!-- Label sticker -->
+        <div class="m2-label">
+          <div>
+            <div class="label-brand">SELBY · PROJECTS</div>
+            <div class="label-model">S980 PRO · 2280</div>
+          </div>
+          <div class="label-spec">PCIe Gen4 ×4 NVMe<br>IT &amp; CYBERSECURITY</div>
+        </div>
+
+        <!-- Two more NAND chips -->
+        <div class="nand-chip">NAND</div>
+        <div class="nand-chip">NAND</div>
+      </div>
+
+      <!-- Project cards -->
+      <div class="projects-section">
+        <div class="section-label">// STORED PROJECTS</div>
+        <div class="project-grid">
+
+          <!-- Project 1 — placeholder, add real project here -->
+          <div class="project-card open">
+            <div class="card-slot">P1</div>
+            <div class="project-name">open slot</div>
+            <div class="project-desc">— coming soon —</div>
+          </div>
+
+          <!-- Project 2 -->
+          <div class="project-card open">
+            <div class="card-slot">P2</div>
+            <div class="project-name">open slot</div>
+            <div class="project-desc">— coming soon —</div>
+          </div>
+
+          <!-- Project 3 -->
+          <div class="project-card open">
+            <div class="card-slot">P3</div>
+            <div class="project-name">open slot</div>
+            <div class="project-desc">— coming soon —</div>
+          </div>
+
+          <!-- Project 4 -->
+          <div class="project-card open">
+            <div class="card-slot">P4</div>
+            <div class="project-name">open slot</div>
+            <div class="project-desc">— coming soon —</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /board-inner -->
+  </div><!-- /m2-board -->
+
+  <nav class="m2-footer" aria-label="Site navigation">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="certifications.html">Certifications</a>
+    <a href="software.html">Software</a>
+    <a href="photography.html">Photography</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</div>
+
+</body>
+</html>
