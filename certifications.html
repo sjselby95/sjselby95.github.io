@@ -43,7 +43,7 @@
 
   .stick {
     width: 100%;
-    max-width: 860px;
+    max-width: 1040px;
     border-radius: 12px;
     border: 1px solid #1f1f1f;
     overflow: hidden;
@@ -122,7 +122,7 @@
   }
   .chip-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
   }
 
@@ -254,6 +254,12 @@
     background: var(--gold);
     border-radius: 0 0 2px 2px;
   }
+  /* DDR5 key notch — a gap in the contact edge, offset just left of center */
+  .notch {
+    width: 20px;
+    height: 36px;
+    flex-shrink: 0;
+  }
   .contact-label {
     text-align: center;
     font-size: 9px;
@@ -264,12 +270,13 @@
   }
 
   /* Responsive */
-  @media (max-width: 640px) {
+  @media (max-width: 760px) {
     .chip-grid { grid-template-columns: repeat(2, 1fr); }
     .header { flex-direction: column; gap: 4px; }
     .header-right { font-size: 10px; }
     .contacts { gap: 3px; }
     .finger { width: 7px; }
+    .notch { width: 14px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -297,7 +304,7 @@
       <div class="title">CERTIFICATIONS</div>
       <div class="sub">memory module // proof of knowledge</div>
     </div>
-    <div class="header-right">DDR5 &middot; 6000MHz &middot; 8 modules</div>
+    <div class="header-right">DDR5 &middot; 6000MHz &middot; 10 modules</div>
   </div>
 
   <div class="grid-area">
@@ -355,6 +362,18 @@
         <div class="chip-sub">future cert</div>
       </div>
 
+      <div class="chip open">
+        <span class="slot-id">U9</span>
+        <div class="chip-name">open slot</div>
+        <div class="chip-sub">future cert</div>
+      </div>
+
+      <div class="chip open">
+        <span class="slot-id">U10</span>
+        <div class="chip-name">open slot</div>
+        <div class="chip-sub">future cert</div>
+      </div>
+
     </div>
   </div>
 
@@ -368,10 +387,15 @@
   </nav>
 
   <div class="contacts" aria-hidden="true">
-    <!-- gold contact fingers -->
+    <!-- gold contact fingers — left bank (18) -->
     <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
     <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
     <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
+    <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
+    <div class="finger"></div><div class="finger"></div>
+    <!-- DDR5 key notch (offset left of center) -->
+    <div class="notch"></div>
+    <!-- gold contact fingers — right bank (22) -->
     <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
     <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
     <div class="finger"></div><div class="finger"></div><div class="finger"></div><div class="finger"></div>
