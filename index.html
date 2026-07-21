@@ -78,16 +78,38 @@
         <path d="M432 180 H534"/><path d="M359 274 V306"/><path d="M602 304 V322 H604 V328"/>
       </g>
 
-      <!-- Contact (rear I/O) -->
-      <a class="link" href="mailto:sjselby95@gmail.com" aria-label="Contact — email sjselby95@gmail.com">
-        <g>
-          <text class="lbl" x="92" y="38" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Contact</text>
-          <rect class="panel" x="32" y="42" width="120" height="62" rx="6" fill="#0c0f12" stroke="#2bbd79" stroke-opacity="0.5"/>
-          <rect x="44" y="56" width="24" height="14" rx="2" fill="#1a2024"/><rect x="76" y="56" width="24" height="14" rx="2" fill="#1a2024"/><rect x="108" y="56" width="24" height="14" rx="2" fill="#1a2024"/>
-          <rect x="44" y="76" width="56" height="14" rx="2" fill="#1a2024"/>
-          <text x="92" y="98" fill="#2bbd79" font-size="8.5" text-anchor="middle" letter-spacing="0.5">sjselby95@gmail.com</text>
-        </g>
-      </a>
+      <!-- Contact (rear I/O shield — three clickable ports) -->
+      <g>
+        <text x="92" y="38" fill="#cfe9dd" font-size="13" font-weight="500" text-anchor="middle">Contact</text>
+        <rect x="32" y="42" width="120" height="62" rx="6" fill="#0c0f12" stroke="#2bbd79" stroke-opacity="0.5"/>
+
+        <!-- Email port -->
+        <a class="link" href="mailto:sjselby95@gmail.com" aria-label="Email — sjselby95@gmail.com">
+          <g>
+            <rect class="panel" x="44" y="52" width="28" height="24" rx="3" fill="#1a2024" stroke="#2bbd79" stroke-opacity="0.5"/>
+            <rect x="51" y="59" width="14" height="10" rx="1.5" fill="none" stroke="#3fe39a" stroke-width="1.2"/>
+            <path d="M51.5 60 L58 65 L64.5 60" fill="none" stroke="#3fe39a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+        </a>
+
+        <!-- LinkedIn port -->
+        <a class="link" href="https://www.linkedin.com/in/sjselby95" target="_blank" rel="noopener" aria-label="LinkedIn — in/sjselby95">
+          <g>
+            <rect class="panel" x="78" y="52" width="28" height="24" rx="3" fill="#1a2024" stroke="#2bbd79" stroke-opacity="0.5"/>
+            <image href="https://cdn.simpleicons.org/linkedin/3fe39a" x="84" y="56" width="16" height="16" preserveAspectRatio="xMidYMid meet"/>
+          </g>
+        </a>
+
+        <!-- GitHub port -->
+        <a class="link" href="https://github.com/sjselby95" target="_blank" rel="noopener" aria-label="GitHub — sjselby95">
+          <g>
+            <rect class="panel" x="112" y="52" width="28" height="24" rx="3" fill="#1a2024" stroke="#2bbd79" stroke-opacity="0.5"/>
+            <image href="https://cdn.simpleicons.org/github/3fe39a" x="118" y="56" width="16" height="16" preserveAspectRatio="xMidYMid meet"/>
+          </g>
+        </a>
+
+        <text x="92" y="98" fill="#2bbd79" font-size="8.5" text-anchor="middle" letter-spacing="0.5">sjselby95@gmail.com</text>
+      </g>
 
       <!-- Name plate (the heatsink that wears MSI's logo on the real board) -->
       <rect x="40" y="124" width="168" height="140" rx="6" fill="#1c2024" stroke="#33373b"/>
