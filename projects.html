@@ -218,6 +218,22 @@
   }
   .dir .empty .blip { color: var(--green); font-style: normal; }
 
+  .dir .st {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--green-bright);
+  }
+  .dir .st .led {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green-bright);
+    box-shadow: 0 0 6px rgba(63,227,154,.6);
+    flex-shrink: 0;
+  }
+
   /* Nav footer */
   .nav-footer {
     background: var(--panel);
@@ -337,9 +353,9 @@
     <div class="cap">
       <div class="cap-row">
         <span>CAPACITY</span>
-        <span>0 B used &middot; drive ready</span>
+        <span>2 items &middot; drive active</span>
       </div>
-      <div class="cap-bar"><div class="cap-fill"></div></div>
+      <div class="cap-bar"><div class="cap-fill" style="width:14%"></div></div>
     </div>
 
     <table class="dir">
@@ -353,8 +369,19 @@
         </tr>
       </thead>
       <tbody>
-        <tr class="empty">
-          <td colspan="5"><span class="blip">●</span> &nbsp; drive formatted &amp; mounted — 0 files &middot; first build incoming</td>
+        <tr class="item">
+          <td class="name">Proxmox VE Homelab</td>
+          <td class="opt">Virtualization</td>
+          <td>512 GB</td>
+          <td class="opt">2026-07</td>
+          <td><span class="st"><span class="led"></span> RUNNING</span></td>
+        </tr>
+        <tr class="item">
+          <td class="name">Jellyfin Media Server</td>
+          <td class="opt">Self-hosted</td>
+          <td>2 TB</td>
+          <td class="opt">2026-07</td>
+          <td><span class="st"><span class="led"></span> RUNNING</span></td>
         </tr>
       </tbody>
     </table>
