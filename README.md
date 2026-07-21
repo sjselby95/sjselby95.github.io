@@ -13,8 +13,13 @@ The site has been rebuilt as an interactive SVG motherboard layout. Each section
 ## Pages
 
 - **index.html** — Main landing page (motherboard layout)
-- **certifications.html** — Certifications displayed as a RAM stick with DRAM chip cards
-- Additional pages linked but not yet built: `about.html`, `projects.html`, `labs.html`, `photography.html`, `contact.html`, `terminal.html`
+- **about.html** — About section, themed as a CPU / silicon die
+- **certifications.html** — Certifications displayed as a DDR5 RAM stick with DRAM chip cards
+- **software.html** — Software list, themed as a BIOS setup utility
+- **projects.html** — Projects, themed as an M.2 NVMe SSD with a directory listing
+- **labs.html** — Labs, themed as a hypervisor / VM console
+- Photography and Contact are not standalone pages — those links point to the Flickr profile and a `mailto:` respectively
+- `terminal.html` — CMOS-battery easter egg, not yet built
 
 ## What was done in this session
 
