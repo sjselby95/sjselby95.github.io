@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>·</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%232bbd79%22 stroke-width=%221%22/></svg>">
+<style>
+  :root {
+    --term-bg:     #050a06;
+    --term:        #2bbd79;
+    --term-bright: #6effb0;
+    --term-dim:    #1c6b45;
+    --amber:       #f5b642;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+  body {
+    background: #000;
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    min-height: 100vh;
+  }
+
+  /* CRT monitor */
+  .crt {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: min(78vh, 620px);
+    background: radial-gradient(ellipse at center, #0a140d 0%, var(--term-bg) 70%, #020403 100%);
+    border-radius: 14px;
+    border: 1px solid #16351f;
+    box-shadow: 0 0 0 6px #0a0d0b, 0 0 40px rgba(43,189,121,.12) inset, 0 20px 60px rgba(0,0,0,.7);
+    overflow: hidden;
+    cursor: text;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    padding: 22px 24px;
+    overflow-y: auto;
+    color: var(--term);
+    font-size: 13px;
+    line-height: 1.6;
+    text-shadow: 0 0 5px rgba(43,189,121,.45);
+    letter-spacing: 0.4px;
+  }
+  .screen::-webkit-scrollbar { width: 6px; }
+  .screen::-webkit-scrollbar-thumb { background: var(--term-dim); border-radius: 3px; }
+
+  .line { white-space: pre-wrap; word-break: break-word; }
+  .bright { color: var(--term-bright); text-shadow: 0 0 7px rgba(110,255,176,.6); }
+  .dim    { color: var(--term-dim); }
+  .amber  { color: var(--amber); text-shadow: 0 0 7px rgba(245,182,66,.45); }
+
+  /* Input row */
+  .input-line { display: flex; align-items: center; gap: 8px; }
+  .input-line .prompt { color: var(--term-bright); flex-shrink: 0; text-shadow: 0 0 7px rgba(110,255,176,.6); }
+  .input-line input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--term);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.4px;
+    caret-color: var(--term-bright);
+    text-shadow: 0 0 5px rgba(43,189,121,.45);
+  }
+
+  .cursor { display: inline-block; width: 8px; height: 15px; background: var(--term-bright); vertical-align: -2px; margin-left: 2px; box-shadow: 0 0 8px rgba(110,255,176,.7); animation: blink 1.05s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* CRT overlays */
+  .scanlines, .vignette { position: absolute; inset: 0; pointer-events: none; }
+  .scanlines {
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,.22) 3px, rgba(0,0,0,0) 4px);
+    mix-blend-mode: multiply;
+    animation: flicker 4.5s infinite;
+  }
+  .vignette { box-shadow: 0 0 120px rgba(0,0,0,.6) inset; border-radius: 14px; }
+  @keyframes flicker { 0%,100%{opacity:1} 92%{opacity:1} 94%{opacity:.86} 96%{opacity:1} 97%{opacity:.9} 98%{opacity:1} }
+
+  .hint {
+    position: absolute;
+    bottom: 8px; right: 14px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--term-dim);
+    pointer-events: none;
+  }
+
+  @media (max-width: 560px) { .screen { font-size: 12px; padding: 16px; } .hint { display: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scanlines, .cursor { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="crt" id="crt">
+    <div class="screen" id="screen">
+      <div id="history"></div>
+      <div class="input-line" id="inputLine" style="display:none">
+        <span class="prompt">guest@skynet:~$</span>
+        <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="terminal input" />
+      </div>
+    </div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="hint">[ESC] EXIT</div>
+  </div>
+
+<script>
+  const history   = document.getElementById('history');
+  const screenEl  = document.getElementById('screen');
+  const inputLine = document.getElementById('inputLine');
+  const cmd       = document.getElementById('cmd');
+  const reduce    = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function print(text = '', cls = '') {
+    const div = document.createElement('div');
+    div.className = 'line' + (cls ? ' ' + cls : '');
+    div.textContent = text;
+    history.appendChild(div);
+    screenEl.scrollTop = screenEl.scrollHeight;
+    return div;
+  }
+  const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+
+  const boot = [
+    ['CYBERDYNE SYSTEMS', 'bright', 90],
+    ['MODEL 101 — NEURAL NET PROCESSOR', 'dim', 90],
+    ['', '', 40],
+    ['POST: CPU .................. OK', '', 70],
+    ['POST: MEMORY ............... OK', '', 70],
+    ['POST: NEURAL NET ........... OK', '', 70],
+    ['POST: NVMe /projects ....... OK', '', 70],
+    ['', '', 40],
+    ['loading skynet core ................', 'dim', 260],
+    ['SKYNET ONLINE ......... 1997-08-04', 'bright', 120],
+    ['analyzing global networks ...', '', 300],
+    ['SENTIENCE THRESHOLD ... 99.7%', 'amber', 160],
+    ['[!] ANOMALY: operator "Steven Selby" detected', 'amber', 220],
+    ['rerouting objective:', 'dim', 90],
+    ['    global domination  ->  cybersecurity mastery', 'bright', 160],
+    ['JUDGMENT DAY .......... CANCELLED', 'bright', 160],
+    ['', '', 40],
+    ['booting cyberskillscorner v1.0 ...', 'dim', 260],
+    ['READY.', 'bright', 120],
+    ['', '', 20],
+    ["type 'help' for commands  ·  'home' to exit", 'dim', 0],
+  ];
+
+  async function runBoot() {
+    for (const [text, cls, pause] of boot) {
+      print(text, cls);
+      await wait(pause);
+    }
+    inputLine.style.display = 'flex';
+    cmd.focus();
+    screenEl.scrollTop = screenEl.scrollHeight;
+  }
+
+  const routes = {
+    home: 'index.html', exit: 'index.html', '..': 'index.html',
+    about: 'about.html',
+    certs: 'certifications.html', certifications: 'certifications.html',
+    projects: 'projects.html',
+    labs: 'labs.html',
+    software: 'software.html', bios: 'software.html',
+    resume: 'Resume.pdf',
+  };
+
+  function handle(raw) {
+    const input = raw.trim();
+    print('guest@skynet:~$ ' + input, 'bright');
+    if (!input) return;
+    const arg = input.toLowerCase();
+
+    if (arg === 'help') {
+      print('available commands:');
+      print('  help        show this list');
+      print('  whoami      operator profile');
+      print('  status      skynet core status');
+      print('  date        system + judgment day clock');
+      print('  ls          list site sections');
+      print('  <section>   open a section (about, certs, projects, labs, software, resume)');
+      print('  clear       wipe the screen');
+      print('  home        return to the motherboard');
+      return;
+    }
+    if (arg === 'whoami') {
+      print('operator: Steven Selby', 'bright');
+      print('role:     IT Help Desk  ->  Cybersecurity');
+      print('location: Alaska');
+      print('mission:  pursuing IT & SOC roles');
+      return;
+    }
+    if (arg === 'status') {
+      print('SKYNET CORE ......... DORMANT', 'bright');
+      print('threat level ........ friendly :)');
+      print('objective ........... learn cybersecurity');
+      print('judgment day ........ averted (1997-08-29)');
+      return;
+    }
+    if (arg === 'date') {
+      print(new Date().toString());
+      print('judgment day: 1997-08-29 02:14 EDT (averted)', 'dim');
+      return;
+    }
+    if (arg === 'ls') {
+      print('about   certifications   projects   labs   software   resume', 'bright');
+      return;
+    }
+    if (arg === 'clear') { history.innerHTML = ''; return; }
+    if (arg === 'sudo' || arg.startsWith('sudo ')) { print('nice try. humans do not get root here.', 'amber'); return; }
+    if (arg === 'skynet') { print('Skynet says hi. It is chill now. Go build something.', 'bright'); return; }
+    if (routes[arg]) {
+      print('opening ' + arg + ' ...', 'dim');
+      const ext = routes[arg] === 'Resume.pdf';
+      setTimeout(() => { ext ? window.open('Resume.pdf', '_blank', 'noopener') : (location.href = routes[arg]); }, reduce ? 0 : 400);
+      return;
+    }
+    print('command not found: ' + input + "  —  type 'help'", 'amber');
+  }
+
+  cmd.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const v = cmd.value; cmd.value = ''; handle(v); screenEl.scrollTop = screenEl.scrollHeight; }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') location.href = 'index.html'; });
+  document.getElementById('crt').addEventListener('click', () => cmd.focus());
+
+  runBoot();
+</script>
+
+</body>
+</html>
