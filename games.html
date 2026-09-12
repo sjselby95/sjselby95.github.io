@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Games — cyberskillscorner</title>
+<meta name="description" content="Games by Steven Selby — self-contained browser games, housed on the site and served off a virtual RTX 3060." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Russo+One&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%232bbd79%22 stroke-width=%221%22/></svg>">
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0a0d0f;
+    --panel-2: #0c0f12;
+    --metal: #15181b;
+    --border: #2c3033;
+    --green: #2bbd79;
+    --green-bright: #3fe39a;
+    --green-dim: #163a28;
+    --amber: #f59e0b;
+    --gold: #c9a24a;
+    --text: #f2faf6;
+    --text-soft: #cfe9dd;
+    --text-mute: #6a7a72;
+    --text-dim: #3a4a42;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 1040px;
+    border-radius: 12px;
+    border: 1px solid #1f1f1f;
+    overflow: hidden;
+    background: var(--panel);
+  }
+
+  /* Browser chrome */
+  .chrome {
+    background: #111417;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #2a2e32; }
+  .url-bar {
+    flex: 1;
+    background: #1a1f22;
+    border-radius: 9px;
+    padding: 4px 14px;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  /* RGB diffuser */
+  .diffuser {
+    height: 4px;
+    background: linear-gradient(to right,
+      #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff,
+      #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff,
+      #ff3b3b
+    );
+    background-size: 200% 100%;
+    animation: rgb-flow 8s linear infinite;
+  }
+  @keyframes rgb-flow {
+    0%   { background-position: 0% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  /* Header */
+  .header {
+    background: #0c0f12;
+    padding: 18px 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .header-left .title {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: var(--text);
+    font-family: "Russo One", var(--mono);
+  }
+  .header-left .sub {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .header-right {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--green-bright);
+    text-align: right;
+  }
+
+  /* GPU status strip */
+  .gpu {
+    background: var(--panel-2);
+    padding: 14px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 30px;
+    border-bottom: 1px solid #12181466;
+  }
+  .gpu .gpu-id {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-soft);
+  }
+  .gpu .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green-bright);
+    box-shadow: 0 0 7px rgba(63,227,154,.7);
+  }
+  .stat { min-width: 104px; }
+  .stat .k { font-size: 9px; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .stat .v { font-size: 11px; letter-spacing: 0.5px; color: var(--text-soft); margin-bottom: 5px; }
+  .meter { height: 5px; background: #101613; border: 1px solid var(--green-dim); border-radius: 4px; overflow: hidden; }
+  .meter > span { display: block; height: 100%; background: linear-gradient(to right, var(--green), var(--green-bright)); }
+
+  /* Card internals visual */
+  .bay { background: #080d0a; padding: 20px 24px 8px; }
+  svg.gfx { width: 100%; height: auto; display: block; }
+
+  /* Game library */
+  .lib { background: #080d0a; padding: 14px 24px 24px; }
+  .lib-cmd { font-size: 12px; letter-spacing: 0.5px; color: var(--text-soft); padding: 6px 0 16px; }
+  .lib-cmd .prompt { color: var(--green-bright); }
+
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .game {
+    background: var(--metal);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    min-height: 148px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.game { cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+  a.game:hover, a.game:focus-visible {
+    border-color: var(--green-bright);
+    box-shadow: 0 0 12px rgba(63,227,154,.22);
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .game .icon { font-size: 26px; line-height: 1; }
+  .game .g-name { font-size: 16px; color: var(--text); }
+  a.game:hover .g-name { color: var(--green-bright); }
+  .game .g-meta { font-size: 10px; letter-spacing: 0.5px; color: var(--text-mute); }
+  .game .play {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--green-bright);
+  }
+  .game .play::before { content: "▶"; font-size: 9px; }
+
+  .game.empty {
+    border-style: dashed;
+    border-color: #1f2822;
+    background: #0c0f12;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .game.empty .slot { font-size: 12px; letter-spacing: 1px; }
+  .game.empty .slot small { display: block; font-size: 9px; margin-top: 6px; color: #2f3a34; letter-spacing: 1px; }
+
+  .idle-banner {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  .idle-banner .blip { color: var(--green); font-style: normal; }
+
+  /* Nav footer */
+  .nav-footer {
+    background: var(--panel);
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-around;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-mute);
+  }
+  .nav-footer a { color: var(--text-mute); text-decoration: none; }
+  .nav-footer a:hover { color: var(--green-bright); }
+
+  @media (max-width: 820px) { .game-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) {
+    .game-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; gap: 4px; }
+    .header-right { text-align: left; }
+    .gpu { gap: 12px 20px; }
+    .nav-footer { flex-wrap: wrap; gap: 8px 14px; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="chrome">
+    <div class="dots">
+      <a class="dot" href="index.html" aria-label="Go home" style="background:#ff5f57;"></a>
+      <a class="dot" href="index.html" aria-label="Go home" style="background:#febc2e;"></a>
+      <a class="dot" href="index.html" aria-label="Go home" style="background:#28c840;"></a>
+    </div>
+    <div class="url-bar">cyberskillscorner.xyz / games</div>
+  </div>
+
+  <div class="diffuser"></div>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="title">GAMES</div>
+      <div class="sub">geforce rtx // arcade</div>
+    </div>
+    <div class="header-right">RTX 3060 &middot; 12GB GDDR6 &middot; GA106</div>
+  </div>
+
+  <!-- GPU status strip -->
+  <div class="gpu">
+    <div class="gpu-id"><span class="led"></span> GA106 &middot; GPU online</div>
+    <div class="stat">
+      <div class="k">GPU CLOCK</div>
+      <div class="v">1.78 GHz</div>
+      <div class="meter"><span style="width:22%"></span></div>
+    </div>
+    <div class="stat">
+      <div class="k">VRAM</div>
+      <div class="v">0.2 / 12 GB</div>
+      <div class="meter"><span style="width:2%"></span></div>
+    </div>
+    <div class="stat" style="min-width:88px">
+      <div class="k">TEMP</div>
+      <div class="v">34&deg;C idle</div>
+    </div>
+    <div class="stat" style="min-width:80px">
+      <div class="k">FAN</div>
+      <div class="v">0% &middot; idle</div>
+    </div>
+    <div class="stat" style="min-width:92px">
+      <div class="k">POWER</div>
+      <div class="v">170W TGP</div>
+    </div>
+  </div>
+
+  <!-- Card internals -->
+  <div class="bay">
+    <svg class="gfx" viewBox="0 0 820 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GeForce RTX 3060 graphics card internals">
+      <!-- PCB -->
+      <rect x="40" y="16" width="740" height="132" rx="6" fill="#0c1a12" stroke="#26402f"/>
+      <rect x="46" y="22" width="728" height="120" rx="4" fill="none" stroke="#153a27" stroke-dasharray="2 5" opacity="0.5"/>
+
+      <!-- 8-pin power connector (top right) -->
+      <rect x="694" y="24" width="66" height="26" rx="3" fill="#0a0d0f" stroke="#233028"/>
+      <g fill="#101613" stroke="#26402f">
+        <rect x="700" y="29" width="12" height="7" rx="1"/><rect x="714" y="29" width="12" height="7" rx="1"/>
+        <rect x="728" y="29" width="12" height="7" rx="1"/><rect x="742" y="29" width="12" height="7" rx="1"/>
+        <rect x="700" y="38" width="12" height="7" rx="1"/><rect x="714" y="38" width="12" height="7" rx="1"/>
+        <rect x="728" y="38" width="12" height="7" rx="1"/><rect x="742" y="38" width="12" height="7" rx="1"/>
+      </g>
+      <text x="727" y="60" fill="#3a4a42" font-size="8" text-anchor="middle" letter-spacing="1">8-PIN</text>
+
+      <!-- GA106 die (center) -->
+      <rect x="352" y="46" width="118" height="74" rx="4" fill="#0a0d0f" stroke="#2bbd79" stroke-opacity="0.6"/>
+      <rect x="368" y="58" width="86" height="50" rx="2" fill="#0c1a12" stroke="#26402f"/>
+      <text x="411" y="80" fill="#6a7a72" font-size="8" text-anchor="middle" letter-spacing="1">NVIDIA</text>
+      <text x="411" y="94" fill="#3fe39a" font-size="11" text-anchor="middle" letter-spacing="2" font-family="'Russo One', monospace">GA106</text>
+
+      <!-- GDDR6 memory packages (flanking the die) -->
+      <g>
+        <rect x="286" y="48" width="46" height="22" rx="2" fill="#0a0d0f" stroke="#233028"/>
+        <rect x="286" y="77" width="46" height="22" rx="2" fill="#0a0d0f" stroke="#233028"/>
+        <rect x="286" y="106" width="46" height="14" rx="2" fill="#0a0d0f" stroke="#233028"/>
+        <rect x="490" y="48" width="46" height="22" rx="2" fill="#0a0d0f" stroke="#233028"/>
+        <rect x="490" y="77" width="46" height="22" rx="2" fill="#0a0d0f" stroke="#233028"/>
+        <rect x="490" y="106" width="46" height="14" rx="2" fill="#0a0d0f" stroke="#233028"/>
+      </g>
+      <text x="309" y="63" fill="#3a4a42" font-size="7" text-anchor="middle" letter-spacing="1">GDDR6</text>
+      <text x="513" y="63" fill="#3a4a42" font-size="7" text-anchor="middle" letter-spacing="1">GDDR6</text>
+
+      <!-- VRM (left side) -->
+      <g fill="#0a0d0f" stroke="#233028">
+        <rect x="70" y="50" width="22" height="30" rx="2"/><rect x="98" y="50" width="22" height="30" rx="2"/>
+        <rect x="70" y="86" width="22" height="30" rx="2"/><rect x="98" y="86" width="22" height="30" rx="2"/>
+      </g>
+      <text x="95" y="130" fill="#3a4a42" font-size="7.5" text-anchor="middle" letter-spacing="1">VRM</text>
+
+      <!-- PCIe x16 gold edge connector (bottom, with key notch) -->
+      <g fill="#c9a24a">
+        <rect x="150" y="150" width="46" height="20" rx="2"/>
+        <!-- key notch gap here -->
+        <rect x="214" y="150" width="330" height="20" rx="2"/>
+      </g>
+      <text x="410" y="185" fill="#3a4a42" font-size="8" text-anchor="middle" letter-spacing="2">PCIe 4.0 &times;16</text>
+    </svg>
+  </div>
+
+  <!-- Game library -->
+  <div class="lib">
+    <div class="lib-cmd"><span class="prompt">geforce:~$</span> ls ./games</div>
+
+    <div class="game-grid">
+
+      <!--
+        ── Template for a real game (copy, fill in, remove this comment) ──
+        <a class="game" href="games/GAME_FILE.html">
+          <div class="icon">🎮</div>
+          <div class="g-name">Game Name</div>
+          <div class="g-meta">Genre · Controls</div>
+          <div class="play">PLAY</div>
+        </a>
+      -->
+
+      <!-- Blank state: empty cartridge slots -->
+      <div class="game empty"><div class="slot">— cartridge slot —<small>insert game</small></div></div>
+      <div class="game empty"><div class="slot">— cartridge slot —<small>insert game</small></div></div>
+      <div class="game empty"><div class="slot">— cartridge slot —<small>insert game</small></div></div>
+
+    </div>
+
+    <div class="idle-banner"><span class="blip">●</span> no cartridges loaded — arcade idle &middot; drop an .html game into /games</div>
+  </div>
+
+  <nav class="nav-footer" aria-label="Site navigation">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="certifications.html">Certifications</a>
+    <a href="projects.html">Projects</a>
+    <a href="labs.html">Labs</a>
+    <a href="https://www.flickr.com/people/192044761@N05/" target="_blank" rel="noopener">Photography</a>
+    <a href="mailto:sjselby95@gmail.com">Contact</a>
+  </nav>
+
+</div>
+
+</body>
+</html>

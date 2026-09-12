@@ -168,11 +168,13 @@
         </g>
       </a>
 
-      <!-- PCIe x16 — open, reserved for the GPU (not a link yet) -->
-      <g>
-        <rect x="150" y="360" width="330" height="28" rx="4" fill="#08090b" stroke="#2a2a2a" stroke-dasharray="4 4"/>
-        <text x="315" y="378" fill="#4a564f" font-size="12" text-anchor="middle" letter-spacing="1">PCIe ×16 — open · reserved for GPU</text>
-      </g>
+      <!-- PCIe x16 — GPU / Games -->
+      <a class="link" href="games.html" aria-label="Games — GPU">
+        <g>
+          <rect class="panel" x="150" y="360" width="330" height="28" rx="4" fill="#0c0f12" stroke="#2bbd79" stroke-opacity="0.5"/>
+          <text class="lbl" x="315" y="378" fill="#cfe9dd" font-size="12" text-anchor="middle" letter-spacing="1">GeForce RTX ×16 — Games</text>
+        </g>
+      </a>
 
       <!-- Labs = exposed M.2 -->
       <a class="link" href="labs.html" aria-label="Labs">
@@ -262,7 +264,7 @@
     <a href="mailto:sjselby95@gmail.com">Contact <span class="arrow">→</span></a>
     <a href="https://www.linkedin.com/in/sjselby95" target="_blank" rel="noopener">LinkedIn <span class="arrow">→</span></a>
     <a href="https://github.com/sjselby95" target="_blank" rel="noopener">GitHub <span class="arrow">→</span></a>
-    <a class="reserved" href="#">PCIe ×16 — reserved for GPU</a>
+    <a href="games.html">Games <span class="arrow">→</span></a>
   </nav>
 
   <div id="lightbox" onclick="this.classList.remove('open')">
