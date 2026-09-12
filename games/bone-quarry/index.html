@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Dig up a fossil, build the skeleton bone by bone, then read about what you found.">
+<meta name="theme-color" content="#e7eae4">
+<style>
+  html{color-scheme:light dark}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Bone Quarry</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Saira+Stencil+One&display=swap">
+</head>
+<body>
+<style>
+:root{
+  --paper:#e7eae4;
+  --panel:#f5f7f2;
+  --panel-2:#dde2da;
+  --ink:#16202b;
+  --ink-soft:#54646f;
+  --line:#c3cbc0;
+  --flag:#ff3d7f;
+  --flag-ink:#c2005a;
+  --mineral:#12a594;
+  --mineral-ink:#07685e;
+  --bone:#f6f1e3;
+  --bone-line:#a8997c;
+  --dirt-1:#96755a;
+  --dirt-2:#755840;
+  --dirt-3:#523c2c;
+  --grid:rgba(22,32,43,.11);
+  --shadow:0 2px 0 rgba(22,32,43,.16);
+  --r:14px;
+  --display:"Saira Stencil One","Arial Narrow",sans-serif;
+  --body:"Andika","Trebuchet MS",system-ui,sans-serif;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101715;
+    --panel:#1a2321;
+    --panel-2:#243130;
+    --ink:#e9efe9;
+    --ink-soft:#9dada6;
+    --line:#31403c;
+    --flag-ink:#ff7aa8;
+    --mineral-ink:#5fe0cf;
+    --grid:rgba(233,239,233,.10);
+    --shadow:0 2px 0 rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101715;
+  --panel:#1a2321;
+  --panel-2:#243130;
+  --ink:#e9efe9;
+  --ink-soft:#9dada6;
+  --line:#31403c;
+  --flag-ink:#ff7aa8;
+  --mineral-ink:#5fe0cf;
+  --grid:rgba(233,239,233,.10);
+  --shadow:0 2px 0 rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--body);font-size:16px;line-height:1.45;
+  -webkit-text-size-adjust:100%;
+  overscroll-behavior:none;
+}
+#app{
+  max-width:760px;margin:0 auto;padding:14px 14px 28px;
+  display:flex;flex-direction:column;gap:14px;min-height:100vh;
+}
+.screen{display:none;flex-direction:column;gap:14px}
+.screen.active{display:flex}
+
+/* ---------- shared chrome ---------- */
+.strip{
+  display:flex;align-items:center;gap:10px;justify-content:space-between;
+  background:var(--panel);border:2px solid var(--line);border-radius:var(--r);
+  padding:9px 12px;box-shadow:var(--shadow);
+}
+.eyebrow{
+  font-family:var(--display);font-size:12px;letter-spacing:.14em;
+  color:var(--ink-soft);text-transform:uppercase;
+}
+h1{font-family:var(--display);font-size:clamp(30px,9vw,50px);line-height:.95;margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-family:var(--display);font-size:clamp(20px,5.4vw,28px);margin:0;line-height:1.1;text-wrap:balance}
+.sub{color:var(--ink-soft);margin:0;font-size:15px}
+
+button{font-family:var(--body);font-size:16px;cursor:pointer}
+.btn{
+  border:2px solid var(--ink);border-radius:12px;background:var(--panel);color:var(--ink);
+  padding:12px 16px;font-weight:700;box-shadow:var(--shadow);
+  min-height:48px;
+}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.go{background:var(--flag);border-color:var(--flag);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.btn.quiet{border-color:var(--line);color:var(--ink-soft);box-shadow:none;padding:9px 12px;min-height:0}
+.btn[disabled]{opacity:.4;cursor:default;box-shadow:none}
+.btn:focus-visible,.word:focus-visible,.site:focus-visible{outline:3px solid var(--mineral);outline-offset:2px}
+
+/* ---------- start / site picker ---------- */
+.hero{
+  border:2px solid var(--line);border-radius:var(--r);background:var(--panel);
+  padding:16px;box-shadow:var(--shadow);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;
+}
+.hero .tag{
+  display:inline-block;font-family:var(--display);font-size:11px;letter-spacing:.16em;
+  background:var(--flag);color:#fff;padding:3px 8px;border-radius:4px;margin-bottom:8px;
+}
+.sites{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.site{
+  display:flex;flex-direction:column;gap:2px;text-align:left;
+  border:2px solid var(--line);border-radius:var(--r);background:var(--panel);
+  padding:10px 10px 12px;box-shadow:var(--shadow);color:var(--ink);
+}
+.site .q{font-family:var(--display);font-size:11px;letter-spacing:.12em;color:var(--ink-soft)}
+.site .nm{font-weight:700;font-size:16px;line-height:1.15}
+.site .st{font-size:13px;color:var(--ink-soft)}
+.site .st.done{color:var(--mineral-ink);font-weight:700}
+.site svg{width:100%;height:74px;display:block;margin-top:4px}
+.site.locked svg{opacity:.3}
+
+/* ---------- dig ---------- */
+.meterwrap{flex:1;display:flex;align-items:center;gap:8px}
+.meter{flex:1;height:12px;border:2px solid var(--ink);border-radius:99px;background:var(--panel-2);overflow:hidden}
+.meter i{display:block;height:100%;width:0%;background:var(--flag);transition:width .18s linear}
+.pct{font-family:var(--display);font-size:14px;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+
+.stage{
+  position:relative;width:100%;border:2px solid var(--ink);border-radius:var(--r);
+  overflow:hidden;background:var(--dirt-2);box-shadow:var(--shadow);touch-action:none;
+}
+.stage.pit{aspect-ratio:1000/700}
+.stage.board{aspect-ratio:1000/640;background:var(--panel);touch-action:none}
+.stage svg,.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pitsvg{--bone:#ded2b6;--bone-line:#7d6a4b}
+#dirt{cursor:crosshair}
+.gridsvg{pointer-events:none;opacity:.75}
+
+.flagpin{transition:opacity .3s ease}
+
+/* ---------- bones ---------- */
+.bfill{fill:var(--bone);stroke:var(--bone-line);stroke-width:2.5;stroke-linejoin:round}
+.bstroke{fill:none;stroke:var(--bone);stroke-linecap:round;stroke-linejoin:round}
+.bstroke-o{fill:none;stroke:var(--bone-line);stroke-linecap:round;stroke-linejoin:round}
+.bone{cursor:grab}
+.bone.moving{cursor:grabbing}
+.bone .bfill,.bone .bstroke-o{filter:drop-shadow(0 3px 2px rgba(0,0,0,.28))}
+.bone.set .bfill,.bone.set .bstroke-o{filter:none}
+.bone.snap{animation:pop .32s ease}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+.ghost{opacity:.2;pointer-events:none}
+.ghost.hot{opacity:1}
+.ghost.hot .bfill{fill:none;stroke:var(--mineral);stroke-width:3.5;stroke-dasharray:9 8}
+.ghost.hot .bstroke{stroke:var(--mineral);stroke-dasharray:9 8}
+.ghost.hot .bstroke-o{stroke:none}
+.ghost.done{display:none}
+
+/* ---------- reveal ---------- */
+.card{
+  border:2px solid var(--line);border-radius:var(--r);background:var(--panel);
+  padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;
+}
+.name{font-family:var(--display);font-size:clamp(26px,7.5vw,40px);line-height:1;margin:0}
+.say{font-family:var(--display);font-size:14px;letter-spacing:.08em;color:var(--flag-ink)}
+.read{font-size:21px;line-height:1.75}
+.word{
+  font:inherit;background:none;border:0;padding:1px 3px;margin:0 -1px;border-radius:6px;
+  color:inherit;border-bottom:2px dotted var(--line);
+}
+.word:hover{background:var(--panel-2)}
+.word.lit{background:var(--mineral);color:#06231f;border-bottom-color:transparent}
+.read p.line{margin:0 0 4px;padding:2px 6px;border-radius:9px;transition:background .18s ease}
+.read p.now{background:var(--panel-2)}
+.name{cursor:pointer}
+.name::after{content:" \1F50A";font-size:.55em;vertical-align:.35em;opacity:.5}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  font-size:13px;border:2px solid var(--line);border-radius:99px;padding:4px 10px;color:var(--ink-soft);
+}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row .btn{flex:1;min-width:140px}
+
+/* ---------- museum ---------- */
+.shelf{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.spec{border:2px solid var(--line);border-radius:var(--r);background:var(--panel);padding:10px;box-shadow:var(--shadow)}
+.spec svg{width:100%;height:76px;display:block}
+.spec .nm{font-weight:700;font-size:15px;line-height:1.15;margin-top:4px}
+.spec .lb{font-family:var(--display);font-size:10px;letter-spacing:.12em;color:var(--ink-soft)}
+.spec.empty{opacity:.55;border-style:dashed}
+.spec.empty .nm{color:var(--ink-soft)}
+
+.toast{
+  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+  background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:99px;
+  font-weight:700;font-size:15px;opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:9;
+}
+.toast.on{opacity:1}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}
+@media (min-width:560px){
+  .sites,.shelf{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+
+<div id="app">
+
+  <!-- ================= START ================= -->
+  <section class="screen active" id="s-start">
+    <div class="hero">
+      <span class="tag">FIELD SEASON 26</span>
+      <h1>Bone Quarry</h1>
+      <p class="sub">Brush the dirt away, find the bones, and build whatever is down there. Then read about what you dug up.</p>
+    </div>
+    <div class="strip">
+      <span class="eyebrow">Pick a dig site</span>
+      <span class="eyebrow" id="start-count">0 / 6 FOUND</span>
+    </div>
+    <div class="sites" id="sites"></div>
+    <div class="strip">
+      <span class="eyebrow">The odd quadrants</span>
+      <span class="eyebrow">NOBODY KNOWS</span>
+    </div>
+    <div class="sites" id="odd-sites"></div>
+    <div class="row">
+      <button class="btn quiet" id="to-museum">My museum</button>
+      <button class="btn quiet" id="sound-toggle">Sound: on</button>
+    </div>
+  </section>
+
+  <!-- ================= DIG ================= -->
+  <section class="screen" id="s-dig">
+    <div class="strip">
+      <button class="btn quiet" id="dig-back">Back</button>
+      <div class="meterwrap">
+        <div class="meter"><i id="dig-bar"></i></div>
+        <span class="pct" id="dig-pct">0%</span>
+      </div>
+    </div>
+    <div>
+      <h2 id="dig-title">Quadrant</h2>
+      <p class="sub">Drag your finger over the dirt to brush it off the bones.</p>
+    </div>
+    <div class="stage pit" id="pit">
+      <svg class="pitsvg" id="pit-svg" viewBox="0 0 1000 700" aria-hidden="true"></svg>
+      <canvas id="dirt"></canvas>
+      <svg class="gridsvg" viewBox="0 0 1000 700" aria-hidden="true">
+        <g stroke="rgba(255,255,255,.34)" stroke-width="2" stroke-dasharray="14 10">
+          <path d="M250 0V700M500 0V700M750 0V700M0 175H1000M0 350H1000M0 525H1000"/>
+        </g>
+        <g fill="#ff3d7f" stroke="#f6f1e3" stroke-width="3">
+          <path d="M28 34l0 40M28 34l34 11-34 11z"/>
+          <path d="M972 34l0 40M972 34l-34 11 34 11z"/>
+          <path d="M28 626l0 40M28 626l34 11-34 11z"/>
+          <path d="M972 626l0 40M972 626l-34 11 34 11z"/>
+        </g>
+      </svg>
+    </div>
+    <div class="row">
+      <button class="btn go" id="dig-done" disabled>Keep digging…</button>
+    </div>
+  </section>
+
+  <!-- ================= BUILD ================= -->
+  <section class="screen" id="s-build">
+    <div class="strip">
+      <button class="btn quiet" id="build-back">Back</button>
+      <span class="eyebrow" id="build-count">0 / 7 BONES IN PLACE</span>
+    </div>
+    <div>
+      <h2>Build the skeleton</h2>
+      <p class="sub">Drag each bone onto its faded shadow. It clicks when it is right.</p>
+    </div>
+    <div class="stage board" id="board">
+      <svg id="board-svg" viewBox="0 0 1000 640"></svg>
+    </div>
+    <div class="row">
+      <button class="btn quiet" id="build-hint">Show me one</button>
+    </div>
+  </section>
+
+  <!-- ================= REVEAL ================= -->
+  <section class="screen" id="s-reveal">
+    <div class="stage board" id="trophy" style="background:var(--panel)">
+      <svg id="trophy-svg" viewBox="0 0 1000 640" aria-hidden="true"></svg>
+    </div>
+    <div class="card">
+      <div>
+        <span class="eyebrow" id="rev-site">QUADRANT</span>
+        <h2 class="name" id="rev-name">Name</h2>
+        <div class="say" id="rev-say">say it like this</div>
+      </div>
+      <div class="facts" id="rev-facts"></div>
+      <div class="read" id="rev-read"></div>
+      <div class="row">
+        <button class="btn" id="rev-speak">Read it to me</button>
+        <button class="btn go" id="rev-keep">Put it in my museum</button>
+      </div>
+      <p class="sub">Tap any word to hear it on its own.</p>
+    </div>
+  </section>
+
+  <!-- ================= MUSEUM ================= -->
+  <section class="screen" id="s-museum">
+    <div class="strip">
+      <button class="btn quiet" id="mus-back">Back</button>
+      <span class="eyebrow" id="mus-count">0 / 6 SPECIMENS</span>
+    </div>
+    <div>
+      <h2>My museum</h2>
+      <p class="sub">Every skeleton you have finished digging up.</p>
+    </div>
+    <div class="shelf" id="shelf"></div>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script id="vox">
+const VOX={"n:trike":[0.0,0.9671],"s:trike:0":[1.1271,2.1523],"w:tri":[3.4394,0.6975],"w:cer":[4.297,0.6163],"w:a":[5.0733,0.4761],"w:tops":[5.7094,0.7326],"w:had":[6.602,0.6063],"w:three":[7.3683,0.6294],"w:sharp":[8.1577,0.7185],"w:horns":[9.0362,0.8203],"s:trike:1":[10.0165,1.7904],"w:the":[11.9669,0.461],"w:big":[12.588,0.6255],"w:frill":[13.3734,0.6753],"w:kept":[14.2087,0.6442],"w:its":[15.0129,0.5075],"w:neck":[15.6805,0.6464],"w:safe":[16.4868,0.7359],"s:trike:2":[17.3827,1.5966],"w:it":[19.1393,0.4439],"w:ate":[19.7432,0.6621],"w:plants":[20.5653,0.7822],"w:all":[21.5075,0.5169],"w:day":[22.1844,0.6477],"w:long":[22.9921,0.7022],"n:stego":[23.8543,0.9751],"s:stego:0":[24.9894,1.9925],"w:ste":[27.1419,0.7027],"w:go":[28.0046,0.6355],"w:sau":[28.8,0.6332],"w:rus":[29.5932,0.6833],"w:plates":[30.4365,0.77],"w:on":[31.3665,0.6251],"w:back":[32.1516,0.6607],"s:stego:1":[32.9723,1.9145],"w:tail":[35.0469,0.673],"w:four":[35.8799,0.6489],"w:spikes":[36.6887,0.8978],"s:stego:2":[37.7465,1.8128],"w:brain":[39.7193,0.722],"w:was":[40.6013,0.6688],"w:as":[41.4301,0.3474],"w:small":[41.9375,0.757],"w:plum":[42.8545,0.6789],"n:trex":[43.6934,1.2115],"s:trex:0":[45.0649,1.8963],"w:t":[47.1212,0.6523],"w:rex":[47.9335,0.7096],"w:huge":[48.8031,0.7739],"w:teeth":[49.737,0.7048],"s:trex:1":[50.6018,1.5382],"w:arms":[52.3,0.7798],"w:were":[53.2397,0.5595],"w:very":[53.9592,0.6549],"w:short":[54.7741,0.695],"s:trex:2":[55.6291,1.6637],"w:could":[57.4528,0.6584],"w:smell":[58.2712,0.7042],"w:food":[59.1353,0.7312],"w:far":[60.0265,0.684],"w:away":[60.8705,0.7214],"n:anky":[61.7519,0.9349],"s:anky:0":[62.8468,1.7045],"w:an":[64.7112,0.6004],"w:ky":[65.4717,0.6384],"w:lo":[66.27,0.6288],"w:like":[67.0588,0.7259],"w:tank":[67.9447,0.6834],"s:anky:1":[68.7882,1.7377],"w:heavy":[70.6859,0.6816],"w:club":[71.5275,0.696],"s:anky:2":[72.3835,1.9685],"w:bony":[74.512,0.727],"n:nanuq":[75.399,1.105],"s:nanuq:0":[76.664,2.1358],"w:na":[78.9599,0.6205],"w:nuq":[79.7404,0.6313],"w:lived":[80.5317,0.7039],"w:up":[81.3956,0.5801],"w:in":[82.1357,0.5858],"w:alaska":[82.8815,0.9317],"s:nanuq:1":[83.9732,1.8681],"w:name":[86.0013,0.7071],"w:means":[86.8684,0.8505],"w:polar":[87.8789,0.7186],"w:bear":[88.7575,0.6092],"w:lizard":[89.5268,0.837],"s:nanuq:2":[90.5237,1.8371],"w:hunted":[92.5208,0.8228],"w:cold":[93.5036,0.7312],"w:and":[94.3949,0.576],"w:dark":[95.1309,0.726],"n:pachy":[96.0169,1.196],"s:pachy:0":[97.3729,2.0736],"w:pa":[99.6065,0.6549],"w:chy":[100.4215,0.6401],"w:rhi":[101.2216,0.6442],"w:no":[102.0257,0.6439],"w:thick":[102.8297,0.6431],"w:nose":[103.6327,0.8025],"s:pachy:1":[104.5952,1.9616],"w:herds":[106.7169,0.8154],"s:pachy:2":[107.6923,1.6683],"w:pushed":[109.5205,0.7029],"w:shoved":[110.3835,0.7183],"w:with":[111.2618,0.6253],"w:head":[112.0471,0.556],"n:squatch":[112.7632,0.8155],"s:squatch:0":[113.7386,1.7421],"w:this":[115.6407,0.6478],"w:one":[116.4485,0.6239],"w:is":[117.2324,0.5735],"w:not":[117.9659,0.7176],"w:dinosaur":[118.8435,1.0062],"s:squatch:1":[120.0097,1.784],"w:walked":[121.9537,0.7445],"w:two":[122.8582,0.6681],"w:legs":[123.6863,0.7668],"w:you":[124.6131,0.5921],"w:do":[125.3652,0.6329],"s:squatch:2":[126.1581,1.499],"w:look":[127.8171,0.6164],"w:at":[128.5935,0.4795],"w:size":[129.233,0.7774],"w:of":[130.1704,0.5265],"w:those":[130.8569,0.7832],"w:feet":[131.8,0.6856],"n:zoggit":[132.6456,0.6923],"s:zoggit:0":[133.498,1.8217],"w:wait":[135.4797,0.6715],"w:that":[136.3112,0.6432],"s:zoggit:1":[137.1144,1.8164],"w:came":[139.0907,0.6765],"w:down":[139.9273,0.6516],"w:from":[140.7389,0.6039],"w:sky":[141.5028,0.7383],"w:ago":[142.4011,0.7212],"s:zoggit:2":[143.2823,1.888],"w:still":[145.3303,0.7065],"w:holds":[146.1969,0.8043],"w:little":[147.1612,0.7522],"w:ray":[148.0734,0.6521],"w:gun":[148.8855,0.6671],"n:dragon":[149.7126,0.8775],"s:dragon:0":[150.7501,1.7812],"w:dinosaurs":[152.6913,1.137],"w:did":[153.9883,0.6265],"w:have":[154.7748,0.6742],"w:wings":[155.609,0.7883],"s:dragon:1":[156.5573,1.8505],"w:used":[158.5678,0.8359],"w:to":[159.5637,0.6138],"w:fly":[160.3375,0.692],"s:dragon:2":[161.1894,1.6954],"w:slept":[163.0448,0.77],"w:ice":[163.9749,0.6757],"n:rusty":[164.8105,1.1498],"s:rusty:0":[166.1203,1.4343],"w:these":[167.7146,0.7335],"w:are":[168.6082,0.5841],"w:bones":[169.3523,0.8331],"s:rusty:1":[170.3454,1.892],"w:someone":[172.3974,0.7999],"w:buried":[173.3573,0.8021],"w:robot":[174.3195,0.9141],"w:here":[175.3936,0.6244],"s:rusty:2":[176.178,1.4901],"w:light":[177.828,0.718],"w:blinks":[178.706,0.8006]};
+const SPRITE_URL="voice.mp3";
+</script>
+<script>
+"use strict";
+/* ============================================================
+   Bone Quarry — a fossil dig for early readers
+   ============================================================ */
+
+/* ---------- tiny svg helpers ---------- */
+const F = n => (Math.round(n * 10) / 10);
+const P = (x, y) => F(x) + "," + F(y);
+
+/* a stroked bone: dark outline underneath, bone-white on top */
+function sb(d, w){
+  return '<path class="bstroke-o" d="'+d+'" stroke-width="'+(w+5)+'"/>'
+       + '<path class="bstroke" d="'+d+'" stroke-width="'+w+'"/>';
+}
+function knob(x, y, r){ return '<circle class="bfill" cx="'+F(x)+'" cy="'+F(y)+'" r="'+F(r)+'"/>'; }
+
+function qpt(p0, c, p1, t){
+  const u = 1 - t;
+  return [u*u*p0[0] + 2*u*t*c[0] + t*t*p1[0], u*u*p0[1] + 2*u*t*c[1] + t*t*p1[1]];
+}
+function qtan(p0, c, p1, t){
+  const u = 1 - t;
+  return [2*u*(c[0]-p0[0]) + 2*t*(p1[0]-c[0]), 2*u*(c[1]-p0[1]) + 2*t*(p1[1]-c[1])];
+}
+function qpath(p0, c, p1){ return "M" + P(p0[0],p0[1]) + " Q" + P(c[0],c[1]) + " " + P(p1[0],p1[1]); }
+
+/* vertebral chain: cord + optional neural spines + vertebra knobs */
+function chain(p0, c, p1, o){
+  o = Object.assign({n:10, r0:12, r1:6, sp0:0, sp1:0, side:-1, cord:7}, o||{});
+  let s = sb(qpath(p0,c,p1), o.cord);
+  let spines = "", knobs = "";
+  for(let i = 0; i < o.n; i++){
+    const t = o.n === 1 ? 0 : i/(o.n-1);
+    const p = qpt(p0,c,p1,t), tg = qtan(p0,c,p1,t);
+    const L = Math.hypot(tg[0],tg[1]) || 1;
+    const nx = -tg[1]/L*o.side, ny = tg[0]/L*o.side;
+    const r = o.r0 + (o.r1-o.r0)*t;
+    const sp = o.sp0 + (o.sp1-o.sp0)*t;
+    if(sp > 2) spines += sb("M"+P(p[0],p[1])+" L"+P(p[0]+nx*sp, p[1]+ny*sp), Math.max(5, r*0.55));
+    knobs += knob(p[0], p[1], r);
+  }
+  return s + spines + knobs;
+}
+
+/* rib cage hanging off a spine curve */
+function ribs(p0, c, p1, o){
+  o = Object.assign({n:7, len:105, t0:.08, t1:.92, sweep:.55, side:1, w:8}, o||{});
+  let s = "";
+  for(let i = 0; i < o.n; i++){
+    const t = o.t0 + (o.t1-o.t0) * (o.n===1?0:i/(o.n-1));
+    const p = qpt(p0,c,p1,t), tg = qtan(p0,c,p1,t);
+    const L = Math.hypot(tg[0],tg[1]) || 1;
+    const nx = -tg[1]/L*o.side, ny = tg[0]/L*o.side;
+    const bell = Math.sin(Math.PI * (0.22 + 0.78*(i/Math.max(1,o.n-1))));
+    const len = o.len * (0.62 + 0.38*bell);
+    const ex = p[0] + nx*len + tg[0]/L*len*o.sweep;
+    const ey = p[1] + ny*len + tg[1]/L*len*o.sweep;
+    const cx = p[0] + nx*len*0.72, cy = p[1] + ny*len*0.72;
+    s += sb("M"+P(p[0],p[1])+" Q"+P(cx,cy)+" "+P(ex,ey), o.w);
+  }
+  return s;
+}
+
+/* a limb: polyline of joints, tapering, with a foot */
+function limb(pts, o){
+  o = Object.assign({w0:22, w1:11, foot:34, toes:3, side:1}, o||{});
+  let s = "", k = "";
+  for(let i = 0; i < pts.length-1; i++){
+    const t = i/Math.max(1,pts.length-2);
+    const w = o.w0 + (o.w1-o.w0)*t;
+    s += sb("M"+P(pts[i][0],pts[i][1])+" L"+P(pts[i+1][0],pts[i+1][1]), w);
+    k += knob(pts[i][0], pts[i][1], w*0.62);
+  }
+  const e = pts[pts.length-1];
+  if(o.foot > 0){
+    for(let j = 0; j < o.toes; j++){
+      const dx = -o.foot*(0.35 + 0.65*j/Math.max(1,o.toes-1)) * o.side;
+      s += sb("M"+P(e[0],e[1])+" L"+P(e[0]+dx, e[1]+10), 8);
+    }
+  }
+  return s + k + knob(e[0], e[1], o.w1*0.62);
+}
+
+/* ---------- skull kit ---------- */
+function eye(x, y, r){
+  return '<circle class="bfill" cx="'+F(x)+'" cy="'+F(y)+'" r="'+F(r)+'" style="fill:var(--dirt-3)"/>';
+}
+function teeth(x0, y0, x1, y1, n, h){
+  let s = "";
+  for(let i = 0; i < n; i++){
+    const t = i/(n-1), x = x0 + (x1-x0)*t, y = y0 + (y1-y0)*t;
+    s += '<path class="bfill" d="M'+P(x-5,y)+' L'+P(x+5,y)+' L'+P(x,y+h)+' Z"/>';
+  }
+  return s;
+}
+function poly(points){
+  return '<path class="bfill" d="M' + points.map(p=>P(p[0],p[1])).join(" L") + ' Z"/>';
+}
+
+/* ============================================================
+   The roster. Each dino builds 7 named bones in board space
+   (1000 x 640, animal facing left).
+   ============================================================ */
+
+function quadBody(){
+  /* shared torso for the four-legged dinosaurs */
+  const sh = [400,300], hip = [640,300];
+  return chain(sh, [520,272], hip, {n:9, r0:16, r1:17, sp0:18, sp1:14, side:-1, cord:9})
+       + ribs(sh, [520,272], hip, {n:8, len:118, side:1, sweep:.35})
+       + poly([[382,282],[352,318],[372,362],[404,340]])
+       + poly([[652,278],[694,300],[678,352],[642,332]]);
+}
+
+const DINOS = [
+  /* ---------------------------------------------------------- */
+  {
+    id:"trike", name:"Triceratops", say:"try-SER-uh-tops",
+    site:"Quadrant 1", place:"Hell Creek, Montana",
+    facts:["30 feet long","Ate plants","3 horns"],
+    lines:["Tri cer a tops had three sharp horns.","The big frill kept its neck safe.","It ate plants all day long."],
+    bones(){
+      return [
+        {id:"frill", label:"frill", svg:
+          '<path class="bfill" d="M'+P(300,258)+' C'+P(300,150)+' '+P(250,120)+' '+P(196,132)+
+          ' C'+P(150,142)+' '+P(132,200)+' '+P(146,262)+' C'+P(158,312)+' '+P(240,320)+' '+P(300,258)+' Z"/>'
+          + sb("M"+P(196,132)+" Q"+P(230,200)+" "+P(240,300), 5)
+          + sb("M"+P(150,146)+" Q"+P(180,210)+" "+P(180,306), 5)
+          + sb("M"+P(258,150)+" Q"+P(272,210)+" "+P(276,286), 5)},
+        {id:"skull", label:"skull", svg:
+          poly([[300,250],[236,232],[176,258],[172,290],[236,314],[302,300]])
+          + sb("M"+P(176,282)+" L"+P(240,318), 12)
+          + '<path class="bfill" d="M'+P(172,262)+' L'+P(140,278)+' L'+P(174,296)+' Z"/>'
+          + sb("M"+P(214,240)+" L"+P(178,190), 13) + sb("M"+P(252,244)+" L"+P(226,190), 13)
+          + sb("M"+P(178,268)+" L"+P(152,250), 9)
+          + eye(224,266,9)},
+        {id:"neck", label:"neck", svg: chain([400,300],[352,272],[306,272],{n:5,r0:16,r1:14,sp0:20,sp1:14})},
+        {id:"body", label:"ribs", svg: quadBody()},
+        {id:"tail", label:"tail", svg: chain([640,300],[790,268],[906,318],{n:11,r0:16,r1:5,sp0:12,sp1:0})},
+        {id:"hind", label:"back leg", svg: limb([[660,320],[688,404],[652,470],[664,516]],{w0:26,w1:12,foot:40,toes:3})},
+        {id:"fore", label:"front leg", svg: limb([[392,326],[404,406],[376,468],[386,514]],{w0:22,w1:11,foot:36,toes:3})}
+      ];
+    }
+  },
+  /* ---------------------------------------------------------- */
+  {
+    id:"stego", name:"Stegosaurus", say:"STEG-oh-SOR-us",
+    site:"Quadrant 2", place:"Morrison Beds, Colorado",
+    facts:["30 feet long","Ate plants","17 plates"],
+    lines:["Ste go sau rus had plates on its back.","Its tail had four sharp spikes.","Its brain was as small as a plum."],
+    bones(){
+      return [
+        {id:"plates", label:"back plates", svg: (function(){
+          let s = "";
+          const p0=[400,300], c=[520,258], p1=[640,300];
+          for(let i=0;i<7;i++){
+            const t=i/6, p=qpt(p0,c,p1,t);
+            const h=34+46*Math.sin(Math.PI*(0.18+0.82*t));
+            const w=16+16*Math.sin(Math.PI*(0.18+0.82*t));
+            s += poly([[p[0]-w,p[1]-24],[p[0],p[1]-24-h],[p[0]+w,p[1]-24]]);
+          }
+          return s;
+        })()},
+        {id:"skull", label:"skull", svg:
+          poly([[318,286],[268,272],[214,282],[204,300],[262,314],[318,308]])
+          + sb("M"+P(210,300)+" L"+P(272,318), 11)
+          + '<path class="bfill" d="M'+P(204,286)+' L'+P(180,296)+' L'+P(206,308)+' Z"/>'
+          + eye(252,292,8)},
+        {id:"neck", label:"neck", svg: chain([400,300],[364,296],[322,296],{n:5,r0:15,r1:12,sp0:16,sp1:10})},
+        {id:"body", label:"ribs", svg: quadBody()},
+        {id:"tail", label:"spiked tail", svg:
+          chain([640,300],[772,296],[900,258],{n:10,r0:16,r1:6,sp0:10,sp1:0})
+          + sb("M"+P(884,262)+" L"+P(938,224), 9) + sb("M"+P(880,276)+" L"+P(942,262), 9)
+          + sb("M"+P(862,254)+" L"+P(902,206), 9) + sb("M"+P(858,272)+" L"+P(906,286), 9)},
+        {id:"hind", label:"back leg", svg: limb([[660,320],[694,406],[664,472],[676,518]],{w0:28,w1:13,foot:40,toes:3})},
+        {id:"fore", label:"front leg", svg: limb([[392,326],[398,398],[382,450],[390,486]],{w0:19,w1:10,foot:32,toes:3})}
+      ];
+    }
+  },
+  /* ---------------------------------------------------------- */
+  {
+    id:"trex", name:"Tyrannosaurus rex", say:"tie-RAN-oh-SOR-us REX",
+    site:"Quadrant 3", place:"Hell Creek, Montana",
+    facts:["40 feet long","Ate meat","60 teeth"],
+    lines:["T rex had huge sharp teeth.","Its arms were very short.","It could smell food far away."],
+    bones(){
+      const sh=[430,258], hip=[620,286];
+      return [
+        {id:"skull", label:"skull", svg:
+          poly([[356,196],[286,172],[218,190],[204,222],[268,242],[358,236]])
+          + teeth(222,236,332,244,7,16)
+          + eye(276,204,10)
+          + '<path class="bfill" d="M'+P(204,204)+' L'+P(184,214)+' L'+P(208,226)+' Z"/>'},
+        {id:"jaw", label:"jaw", svg:
+          poly([[352,258],[276,266],[214,254],[212,270],[286,290],[352,278]])
+          + teeth(226,258,330,266,6,-15)},
+        {id:"neck", label:"neck", svg: chain(sh,[400,206],[362,214],{n:6,r0:16,r1:12,sp0:22,sp1:12})},
+        {id:"body", label:"ribs", svg:
+          chain(sh,[524,244],hip,{n:9,r0:17,r1:18,sp0:26,sp1:20,cord:10})
+          + ribs(sh,[524,244],hip,{n:8,len:120,side:1,sweep:.3})
+          + poly([[414,242],[382,278],[404,320],[436,296]])
+          + poly([[632,264],[676,288],[658,340],[622,318]])},
+        {id:"tail", label:"tail", svg: chain(hip,[770,268],[912,232],{n:11,r0:17,r1:5,sp0:18,sp1:0})},
+        {id:"legL", label:"back leg", svg: limb([[636,306],[684,398],[634,472],[652,524]],{w0:30,w1:13,foot:52,toes:3})},
+        {id:"legR", label:"other leg", svg: limb([[604,308],[560,392],[598,464],[586,516]],{w0:26,w1:11,foot:46,toes:3,side:-1})},
+        {id:"arms", label:"tiny arms", svg:
+          limb([[430,296],[452,338],[428,362]],{w0:11,w1:7,foot:20,toes:2})
+          + limb([[412,300],[430,344],[406,368]],{w0:9,w1:6,foot:18,toes:2})}
+      ];
+    }
+  },
+  /* ---------------------------------------------------------- */
+  {
+    id:"anky", name:"Ankylosaurus", say:"an-KY-loh-SOR-us",
+    site:"Quadrant 4", place:"Two Medicine, Montana",
+    facts:["25 feet long","Ate plants","Built like a tank"],
+    lines:["An ky lo sau rus was like a tank.","Its tail had a big heavy club.","Bony plates kept its back safe."],
+    bones(){
+      return [
+        {id:"armor", label:"armor plates", svg: (function(){
+          let s = "";
+          const p0=[398,286], c=[520,252], p1=[644,288];
+          for(let i=0;i<9;i++){
+            const t=i/8, p=qpt(p0,c,p1,t);
+            s += poly([[p[0]-22,p[1]-26],[p[0],p[1]-44],[p[0]+22,p[1]-26],[p[0],p[1]-16]]);
+          }
+          return s;
+        })()},
+        {id:"skull", label:"skull", svg:
+          poly([[336,300],[300,276],[240,276],[212,296],[236,320],[318,322]])
+          + sb("M"+P(216,308)+" L"+P(286,326), 11)
+          + poly([[302,272],[326,250],[336,278]])
+          + poly([[240,272],[218,252],[212,282]])
+          + eye(266,296,8)},
+        {id:"neck", label:"neck", svg: chain([400,300],[368,300],[340,302],{n:4,r0:16,r1:14,sp0:12,sp1:8})},
+        {id:"body", label:"ribs", svg: quadBody()},
+        {id:"tail", label:"tail", svg: chain([640,300],[752,300],[856,304],{n:9,r0:16,r1:9,sp0:8,sp1:0})},
+        {id:"club", label:"tail club", svg:
+          '<path class="bfill" d="M'+P(858,304)+' C'+P(858,254)+' '+P(944,252)+' '+P(946,300)+
+          ' C'+P(948,350)+' '+P(860,352)+' '+P(858,304)+' Z"/>'
+          + knob(886,278,15) + knob(922,296,13) + knob(890,326,14)},
+        {id:"hind", label:"back leg", svg: limb([[660,322],[684,392],[658,442],[668,480]],{w0:28,w1:14,foot:40,toes:3})},
+        {id:"fore", label:"front leg", svg: limb([[392,326],[398,388],[380,436],[388,474]],{w0:24,w1:13,foot:36,toes:3})}
+      ];
+    }
+  },
+  /* ---------------------------------------------------------- */
+  {
+    id:"nanuq", name:"Nanuqsaurus", say:"nuh-NOOK-sor-us",
+    site:"Quadrant 5", place:"Colville Bluff, Alaska",
+    facts:["20 feet long","Ate meat","Lived in Alaska"],
+    lines:["Na nuq sau rus lived up in Alaska.","Its name means polar bear lizard.","It hunted in the cold and the dark."],
+    bones(){
+      const sh=[440,270], hip=[624,292];
+      return [
+        {id:"skull", label:"skull", svg:
+          poly([[376,214],[318,192],[258,206],[248,234],[302,252],[378,250]])
+          + teeth(262,246,352,252,6,15)
+          + eye(310,220,9)
+          + sb("M"+P(300,192)+" L"+P(348,186), 7)},
+        {id:"jaw", label:"jaw", svg:
+          poly([[372,268],[312,276],[258,264],[258,280],[320,298],[372,286]])
+          + teeth(268,268,352,276,5,-14)},
+        {id:"neck", label:"neck", svg: chain(sh,[412,222],[386,228],{n:5,r0:15,r1:11,sp0:20,sp1:12})},
+        {id:"body", label:"ribs", svg:
+          chain(sh,[532,254],hip,{n:8,r0:16,r1:17,sp0:24,sp1:18,cord:9})
+          + ribs(sh,[532,254],hip,{n:7,len:108,side:1,sweep:.3})
+          + poly([[424,254],[394,288],[416,326],[446,304]])
+          + poly([[636,268],[678,292],[662,342],[626,320]])},
+        {id:"tail", label:"tail", svg: chain(hip,[760,276],[894,246],{n:10,r0:16,r1:5,sp0:16,sp1:0})},
+        {id:"legL", label:"back leg", svg: limb([[640,310],[684,394],[636,462],[654,510]],{w0:27,w1:12,foot:48,toes:3})},
+        {id:"legR", label:"other leg", svg: limb([[610,312],[570,388],[604,456],[592,504]],{w0:23,w1:10,foot:42,toes:3,side:-1})},
+        {id:"arms", label:"tiny arms", svg:
+          limb([[440,302],[462,340],[440,362]],{w0:10,w1:6,foot:18,toes:2})
+          + limb([[424,306],[442,346],[420,368]],{w0:9,w1:6,foot:16,toes:2})}
+      ];
+    }
+  },
+  /* ---------------------------------------------------------- */
+  {
+    id:"pachy", name:"Pachyrhinosaurus", say:"PAK-ee-RY-no-SOR-us",
+    site:"Quadrant 6", place:"Colville Bluff, Alaska",
+    facts:["20 feet long","Ate plants","Thick bumpy nose"],
+    lines:["Pa chy rhi no sau rus had a thick nose.","It lived in Alaska in big herds.","It pushed and shoved with its head."],
+    bones(){
+      return [
+        {id:"frill", label:"neck frill", svg:
+          '<path class="bfill" d="M'+P(306,262)+' C'+P(304,168)+' '+P(252,142)+' '+P(206,156)+
+          ' C'+P(164,170)+' '+P(154,224)+' '+P(168,272)+' C'+P(180,314)+' '+P(252,318)+' '+P(306,262)+' Z"/>'
+          + poly([[204,152],[188,120],[228,134]]) + poly([[258,148],[262,116],[288,142]])
+          + sb("M"+P(206,158)+" Q"+P(230,214)+" "+P(238,300), 5)},
+        {id:"skull", label:"skull", svg:
+          poly([[308,254],[246,236],[186,258],[182,290],[244,312],[310,300]])
+          + sb("M"+P(186,282)+" L"+P(246,316), 12)
+          + '<path class="bfill" d="M'+P(182,262)+' L'+P(148,278)+' L'+P(184,296)+' Z"/>'
+          + knob(200,250,20) + knob(224,244,17)
+          + eye(238,268,9)},
+        {id:"neck", label:"neck", svg: chain([400,300],[356,276],[312,276],{n:5,r0:16,r1:14,sp0:20,sp1:14})},
+        {id:"body", label:"ribs", svg: quadBody()},
+        {id:"tail", label:"tail", svg: chain([640,300],[772,282],[888,312],{n:10,r0:16,r1:6,sp0:12,sp1:0})},
+        {id:"hind", label:"back leg", svg: limb([[660,320],[688,404],[652,470],[664,516]],{w0:26,w1:12,foot:40,toes:3})},
+        {id:"fore", label:"front leg", svg: limb([[392,326],[404,406],[376,468],[386,514]],{w0:22,w1:11,foot:36,toes:3})}
+      ];
+    }
+  },
+  /* ============ the odd quadrants: not dinosaurs at all ============ */
+  {
+    id:"squatch", name:"Sasquatch", say:"SASS-kwatch", odd:true,
+    box:"200 20 600 620",
+    site:"Quadrant 7", place:"Skilak Ridge, Alaska",
+    facts:["9 feet tall","Ate berries","Huge feet"],
+    lines:["This one is not a dinosaur.","It walked on two legs like you do.","Look at the size of those feet."],
+    bones(){
+      return [
+        {id:"skull", label:"skull", svg:
+          '<ellipse class="bfill" cx="480" cy="146" rx="58" ry="52"/>'
+          + sb("M"+P(424,162)+" L"+P(536,162), 13)
+          + eye(456,176,11) + eye(506,176,11)
+          + poly([[470,186],[490,186],[480,204]])},
+        {id:"jaw", label:"jaw", svg:
+          poly([[432,196],[528,196],[518,232],[480,244],[442,232]])
+          + teeth(452,208,508,208,6,13)},
+        {id:"chest", label:"ribs", svg:
+          chain([480,206],[480,290],[480,374],{n:9,r0:14,r1:16,cord:9})
+          + ribs([480,206],[480,290],[480,374],{n:6,len:96,side:1,sweep:.18,t0:.12,t1:.9})
+          + ribs([480,206],[480,290],[480,374],{n:6,len:96,side:-1,sweep:.18,t0:.12,t1:.9})
+          + sb("M"+P(408,236)+" L"+P(552,236), 11)},
+        {id:"armL", label:"long arm", svg:
+          limb([[424,242],[392,338],[404,426]],{w0:19,w1:11,foot:28,toes:4,side:1})},
+        {id:"armR", label:"other arm", svg:
+          limb([[536,242],[568,338],[556,426]],{w0:19,w1:11,foot:28,toes:4,side:-1})},
+        {id:"legs", label:"hips and legs", svg:
+          poly([[424,368],[536,368],[548,406],[512,424],[448,424],[412,406]])
+          + limb([[452,414],[442,482],[450,548]],{w0:26,w1:17,foot:0})
+          + limb([[508,414],[518,482],[510,548]],{w0:26,w1:17,foot:0})},
+        {id:"feet", label:"enormous feet", svg: (function(){
+          let s = "";
+          [[424,-1],[536,1]].forEach(function(f){
+            const cx = f[0], dir = f[1];
+            s += '<ellipse class="bfill" cx="'+(cx + dir*26)+'" cy="578" rx="72" ry="26"/>';
+            for(let i = 0; i < 5; i++)
+              s += knob(cx + dir*(84 - i*6), 562 + i*8, 9 - i*0.8);
+          });
+          return s;
+        })()}
+      ];
+    }
+  },
+  {
+    id:"zoggit", name:"Zoggit", say:"ZOG-it", odd:true,
+    box:"280 40 440 560",
+    site:"Quadrant 8", place:"Crater Flats",
+    facts:["3 feet tall","From space","Big brain"],
+    lines:["Wait. That is not a dinosaur.","It came down from the sky long ago.","It still holds its little ray gun."],
+    bones(){
+      return [
+        {id:"skull", label:"big skull", svg:
+          '<ellipse class="bfill" cx="480" cy="164" rx="86" ry="74"/>'
+          + '<ellipse class="bfill" cx="446" cy="180" rx="26" ry="17" transform="rotate(-22 446 180)" style="fill:var(--dirt-3)"/>'
+          + '<ellipse class="bfill" cx="516" cy="180" rx="26" ry="17" transform="rotate(22 516 180)" style="fill:var(--dirt-3)"/>'
+          + knob(472,214,5) + knob(490,214,5)},
+        {id:"jaw", label:"tiny jaw", svg:
+          poly([[454,228],[506,228],[498,250],[462,250]])},
+        {id:"chest", label:"ribs", svg:
+          chain([480,250],[480,318],[480,382],{n:7,r0:9,r1:11,cord:6})
+          + ribs([480,250],[480,318],[480,382],{n:4,len:62,side:1,sweep:.2,t0:.15,t1:.85,w:6})
+          + ribs([480,250],[480,318],[480,382],{n:4,len:62,side:-1,sweep:.2,t0:.15,t1:.85,w:6})
+          + sb("M"+P(432,272)+" L"+P(528,272), 7)},
+        {id:"armL", label:"spindly arm", svg:
+          limb([[436,278],[382,372],[398,452]],{w0:10,w1:6,foot:26,toes:3,side:1})},
+        {id:"armR", label:"other arm", svg:
+          limb([[524,278],[578,372],[562,452]],{w0:10,w1:6,foot:26,toes:3,side:-1})},
+        {id:"legs", label:"thin legs", svg:
+          poly([[444,376],[516,376],[524,404],[436,404]])
+          + limb([[456,402],[444,470],[452,534]],{w0:11,w1:7,foot:24,toes:3,side:1})
+          + limb([[504,402],[516,470],[508,534]],{w0:11,w1:7,foot:24,toes:3,side:-1})},
+        {id:"gun", label:"ray gun", svg:
+          poly([[596,438],[676,438],[676,466],[596,466]])
+          + poly([[676,444],[722,448],[722,458],[676,462]])
+          + poly([[606,466],[634,466],[628,502],[602,500]])
+          + knob(722,453,11) + knob(616,450,7)}
+      ];
+    }
+  },
+  {
+    id:"dragon", name:"Ice Dragon", say:"EYESS DRAG-un", odd:true,
+    box:"140 60 840 480",
+    site:"Quadrant 9", place:"Glacier Cave",
+    facts:["30 feet long","Had wings","Slept in ice"],
+    lines:["Dinosaurs did not have wings.","This one used its wings to fly.","Long ago it slept in the ice."],
+    bones(){
+      return [
+        {id:"skull", label:"skull", svg:
+          poly([[336,296],[272,272],[200,286],[188,314],[252,336],[338,330]])
+          + teeth(206,318,320,328,7,16)
+          + poly([[330,286],[352,304],[326,316]])
+          + sb("M"+P(286,276)+" L"+P(344,238), 11) + sb("M"+P(250,276)+" L"+P(300,232), 9)
+          + eye(268,300,9)
+          + poly([[336,336],[254,344],[196,330],[200,348],[262,368],[338,356]])
+          + teeth(214,340,320,350,6,-14)},
+        {id:"neck", label:"neck", svg: chain([432,318],[386,290],[342,300],{n:6,r0:15,r1:11,sp0:22,sp1:12})},
+        {id:"body", label:"ribs", svg:
+          chain([432,318],[534,300],[640,322],{n:8,r0:17,r1:17,sp0:20,sp1:14,cord:9})
+          + ribs([432,318],[534,300],[640,322],{n:7,len:112,side:1,sweep:.3})
+          + poly([[416,300],[386,336],[408,376],[440,354]])
+          + poly([[652,300],[694,322],[678,374],[642,354]])},
+        {id:"wings", label:"WINGS", svg: (function(){
+          let s = "";
+          [[0, 1], [26, 0.86]].forEach(function(o, k){
+            const dx = o[0], sc = o[1];
+            const sh = [470 + dx, 292], tip = [648 + dx, 92 + dx];
+            s += sb("M"+P(sh[0],sh[1])+" Q"+P(540+dx,150)+" "+P(tip[0],tip[1]), 13*sc);
+            const fan = [[540+dx,320],[652+dx,272],[742+dx,196],[772+dx,112]];
+            fan.forEach(function(f){
+              s += sb("M"+P(tip[0],tip[1])+" Q"+P((tip[0]+f[0])/2 + 16, (tip[1]+f[1])/2 - 18)+" "+P(f[0],f[1]), 8*sc);
+              s += knob(f[0], f[1], 7*sc);
+            });
+            s += knob(tip[0], tip[1], 14*sc);
+          });
+          return s;
+        })()},
+        {id:"tail", label:"tail", svg:
+          chain([640,322],[772,300],[898,252],{n:11,r0:17,r1:5,sp0:16,sp1:0})
+          + poly([[896,246],[938,238],[900,262]])},
+        {id:"hind", label:"back leg", svg: limb([[660,342],[692,420],[656,478],[668,520]],{w0:26,w1:12,foot:40,toes:3})},
+        {id:"fore", label:"front leg", svg: limb([[424,346],[436,416],[408,470],[418,512]],{w0:21,w1:11,foot:36,toes:3})}
+      ];
+    }
+  },
+  {
+    id:"rusty", name:"Rusty the Robot", say:"RUSS-tee", odd:true,
+    box:"300 10 400 610",
+    site:"Quadrant 10", place:"Old Mine Road",
+    facts:["6 feet tall","Made of metal","Still blinks"],
+    lines:["These are not bones at all.","Someone buried a robot down here.","Its little light still blinks."],
+    bones(){
+      const rect = (x, y, w, h) => poly([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]);
+      return [
+        {id:"antenna", label:"antenna", svg:
+          sb("M"+P(480,112)+" L"+P(480,52), 7) + knob(480,46,15) + knob(480,112,9)},
+        {id:"head", label:"head", svg:
+          rect(424,118,112,84)
+          + rect(440,140,80,26)
+          + knob(462,153,8) + knob(498,153,8)
+          + knob(432,126,5) + knob(528,126,5) + knob(432,194,5) + knob(528,194,5)
+          + rect(452,202,56,14)},
+        {id:"chest", label:"chest plate", svg:
+          poly([[412,222],[548,222],[556,344],[404,344]])
+          + '<circle class="bfill" cx="480" cy="268" r="26"/>'
+          + knob(480,268,12)
+          + sb("M"+P(426,308)+" L"+P(534,308), 7)
+          + knob(422,232,6) + knob(538,232,6) + knob(416,334,6) + knob(544,334,6)},
+        {id:"armL", label:"arm", svg:
+          sb("M"+P(404,244)+" L"+P(356,326), 17) + sb("M"+P(356,326)+" L"+P(372,412), 13)
+          + knob(404,244,12) + knob(356,326,12)
+          + rect(350,412,44,30)},
+        {id:"armR", label:"other arm", svg:
+          sb("M"+P(556,244)+" L"+P(604,326), 17) + sb("M"+P(604,326)+" L"+P(588,412), 13)
+          + knob(556,244,12) + knob(604,326,12)
+          + rect(566,412,44,30)},
+        {id:"legs", label:"legs", svg:
+          rect(424,348,112,26)
+          + sb("M"+P(452,378)+" L"+P(446,462), 19) + sb("M"+P(446,462)+" L"+P(452,540), 15)
+          + sb("M"+P(508,378)+" L"+P(514,462), 19) + sb("M"+P(514,462)+" L"+P(508,540), 15)
+          + knob(446,462,13) + knob(514,462,13)
+          + rect(410,540,76,32) + rect(474,540,76,32)},
+        {id:"gear", label:"loose gear", svg: (function(){
+          let s = '<circle class="bfill" cx="702" cy="486" r="46"/>';
+          for(let i = 0; i < 8; i++){
+            const a = i/8 * Math.PI * 2;
+            s += poly([
+              [702 + Math.cos(a-0.19)*44, 486 + Math.sin(a-0.19)*44],
+              [702 + Math.cos(a-0.19)*62, 486 + Math.sin(a-0.19)*62],
+              [702 + Math.cos(a+0.19)*62, 486 + Math.sin(a+0.19)*62],
+              [702 + Math.cos(a+0.19)*44, 486 + Math.sin(a+0.19)*44]]);
+          }
+          return s + '<circle class="bfill" cx="702" cy="486" r="16" style="fill:var(--dirt-3)"/>';
+        })()}
+      ];
+    }
+  }
+];
+
+/* ---------- sound ---------- */
+let AC = null, soundOn = true;
+function tone(freq, dur, type, vol){
+  if(!soundOn) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === "suspended") AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "sine"; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol || 0.16, AC.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + dur + 0.02);
+  }catch(e){}
+}
+const sfx = {
+  scrape(){ tone(120 + Math.random()*60, 0.06, "triangle", 0.05); },
+  found(){ tone(760, 0.12, "sine", 0.14); setTimeout(()=>tone(1010, 0.16, "sine", 0.12), 90); },
+  snap(){ tone(520, 0.09, "square", 0.09); setTimeout(()=>tone(880, 0.14, "sine", 0.13), 70); },
+  nope(){ tone(180, 0.1, "sine", 0.08); },
+  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f, 0.22, "sine", 0.14), i*130)); }
+};
+
+/* ---------- voice: baked-in narration on a plain <audio> element ----------
+   iOS silences the Web Audio API with the hardware Ring/Silent switch, and
+   Chrome on iPhone is Safari underneath, so it behaves the same way. A media
+   element plays through the media channel instead, which the switch does not
+   mute, so the narration goes here and only the little game blips use WebAudio. */
+let vox = null, voxTimer = null, voxSeq = null;
+
+function voxEl(){
+  if(!vox){
+    vox = document.createElement("audio");
+    vox.setAttribute("playsinline", "");
+    vox.autoplay = false;
+    vox.preload = "auto";
+    vox.src = SPRITE_URL;
+    vox.load();
+  }
+  return vox;
+}
+/* nothing here ever starts playback — every play() in this file is called
+   straight out of a tap handler, which is the only thing iOS will allow anyway */
+function loadVoice(){ voxEl(); return null; }
+function ctx(){
+  try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+  return AC;
+}
+function wake(){
+  const c = ctx();
+  if(c && c.state === "suspended"){ try{ c.resume(); }catch(e){} }
+  return c;
+}
+function fallbackSpeak(text, rate){
+  if(!("speechSynthesis" in window)) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = rate || 0.82; u.pitch = 1.05; u.lang = "en-US";
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function stopVoice(){
+  clearTimeout(voxTimer); voxTimer = null; voxSeq = null;
+  if(vox){ try{ vox.pause(); }catch(e){} }
+  if("speechSynthesis" in window){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+}
+function ready(fn){
+  const a = voxEl();
+  if(a.readyState >= 1) return fn(a);
+  const go = () => { a.removeEventListener("loadedmetadata", go); fn(a); };
+  a.addEventListener("loadedmetadata", go);
+  try{ a.load(); }catch(e){}
+}
+/* play one slice of the sprite; onDone fires when the slice finishes */
+function playSeg(id, onDone){
+  const seg = VOX[id];
+  if(!seg){ if(onDone) onDone(); return 0; }
+  ready(a => {
+    try{
+      a.pause();
+      a.currentTime = seg[0];
+      const p = a.play();
+      if(p && p.catch) p.catch(() => { if(onDone) onDone(); });
+    }catch(e){ if(onDone) onDone(); return; }
+    clearTimeout(voxTimer);
+    voxTimer = setTimeout(() => {
+      try{ a.pause(); }catch(e){}
+      if(onDone) onDone();
+    }, seg[1] * 1000 + 70);
+  });
+  return seg[1];
+}
+function sayWord(word){
+  const k = String(word).toLowerCase().replace(/[^a-z']/g, "");
+  stopVoice();
+  if(VOX["w:" + k]) return playSeg("w:" + k) * 1000;
+  fallbackSpeak(k, 0.7);
+  return 900;
+}
+function sayName(d){
+  stopVoice();
+  if(VOX["n:" + d.id]) return playSeg("n:" + d.id) * 1000;
+  fallbackSpeak(d.name, 0.8);
+  return 1400;
+}
+function sayAll(d, onLine){
+  stopVoice();
+  const ids = ["n:" + d.id].concat(d.lines.map((l, i) => "s:" + d.id + ":" + i));
+  if(!VOX[ids[0]]){
+    fallbackSpeak(d.name + ". " + d.lines.join(" ").replace(/\s+/g, " "), 0.8);
+    return;
+  }
+  ready(a => {
+    const token = {};
+    voxSeq = token;
+    let step = 0;
+    /* keep the element playing the whole way through and just hop the playhead
+       between slices — iOS will not re-authorise a play() call from a timer,
+       but it never objects to a seek on audio that is already running */
+    const hop = () => {
+      if(voxSeq !== token) return;
+      if(step >= ids.length){
+        try{ a.pause(); }catch(e){}
+        if(onLine) onLine(-1);
+        voxSeq = null;
+        return;
+      }
+      const seg = VOX[ids[step]];
+      try{ a.currentTime = seg[0]; }catch(e){}
+      if(onLine) onLine(step - 1);
+      step++;
+      clearTimeout(voxTimer);
+      voxTimer = setTimeout(hop, seg[1] * 1000 + 140);
+    };
+    hop();
+    try{
+      const p = a.play();
+      if(p && p.catch) p.catch(() => {
+        if(voxSeq !== token) return;
+        stopVoice();
+        fallbackSpeak(d.name + ". " + d.lines.join(" ").replace(/\s+/g, " "), 0.8);
+      });
+    }catch(e){}
+  });
+}
+window.addEventListener("pointerdown", function once(){
+  window.removeEventListener("pointerdown", once);
+  wake(); loadVoice();
+}, { once: true });
+
+/* ---------- storage (local first, cloud when the viewer has it) ---------- */
+const KEY = "bonequarry.v1";
+let store = { found: {} };
+let cloud = null;
+
+function loadLocal(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) store = JSON.parse(raw) || store; }catch(e){}
+  if(!store.found) store.found = {};
+}
+function saveLocal(){
+  try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){}
+}
+function persist(){
+  saveLocal();
+}
+loadLocal();
+
+
+/* ---------- screens ---------- */
+const $ = s => document.querySelector(s);
+function show(id){
+  stopVoice();
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+  window.scrollTo(0, 0);
+}
+let toastT = null;
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("on"), 1600);
+}
+
+/* ---------- site picker + museum ---------- */
+function thumbSvg(d, faded){
+  const bones = d.bones().map(b => b.svg).join("");
+  return '<svg viewBox="' + (d.box || "110 100 870 460") + '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'
+       + '<g'+(faded ? ' opacity=".9" style="--bone:var(--panel-2);--bone-line:var(--line)"' : '')+'>'
+       + bones + '</g></svg>';
+}
+function siteCard(d){
+  const got = !!store.found[d.id];
+  const el = document.createElement("button");
+  el.className = "site" + (got ? "" : " locked");
+  el.innerHTML = '<span class="q">' + d.site.toUpperCase() + '</span>'
+    + '<span class="nm">' + (got ? d.name : (d.odd ? "Something else" : "Unknown bones")) + '</span>'
+    + '<span class="st' + (got ? " done" : "") + '">' + (got ? "Dug up ✓" : d.place) + '</span>'
+    + thumbSvg(d, !got);
+  el.addEventListener("click", () => startDig(d));
+  return el;
+}
+function renderSites(){
+  const a = $("#sites"), b = $("#odd-sites");
+  a.innerHTML = ""; b.innerHTML = "";
+  DINOS.forEach(d => (d.odd ? b : a).appendChild(siteCard(d)));
+  const n = Object.keys(store.found).length;
+  $("#start-count").textContent = n + " / " + DINOS.length + " FOUND";
+}
+function renderShelf(){
+  const wrap = $("#shelf"); wrap.innerHTML = "";
+  DINOS.forEach(d => {
+    const rec = store.found[d.id];
+    const el = document.createElement("div");
+    el.className = "spec" + (rec ? "" : " empty");
+    el.innerHTML = thumbSvg(d, !rec)
+      + '<div class="lb">' + d.site.toUpperCase() + '</div>'
+      + '<div class="nm">' + (rec ? d.name : "Empty case") + '</div>';
+    wrap.appendChild(el);
+  });
+  $("#mus-count").textContent = Object.keys(store.found).length + " / " + DINOS.length + " SPECIMENS";
+}
+
+/* ============================================================
+   DIG
+   ============================================================ */
+let current = null, digCleared = 0, digTimer = null;
+const pitSvg = $("#pit-svg"), dirt = $("#dirt");
+const dctx = dirt.getContext("2d", { willReadFrequently: true });
+
+function rand(a, b){ return a + Math.random()*(b-a); }
+
+function paintDirt(){
+  const r = dirt.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(2, Math.round(r.width * dpr)), h = Math.max(2, Math.round(r.height * dpr));
+  let prev = null;
+  if(dirt.width > 4 && (dirt.width !== w || dirt.height !== h)){
+    prev = document.createElement("canvas");
+    prev.width = dirt.width; prev.height = dirt.height;
+    prev.getContext("2d").drawImage(dirt, 0, 0);
+  }
+  dirt.width = w; dirt.height = h;
+  if(prev){ dctx.drawImage(prev, 0, 0, w, h); return; }
+
+  /* strata bands */
+  const bands = ["#8f6f52", "#7a5c42", "#6a5039", "#8a6a4d", "#5d452f"];
+  const bh = h / bands.length;
+  bands.forEach((c, i) => {
+    dctx.fillStyle = c;
+    dctx.beginPath();
+    dctx.moveTo(0, i*bh);
+    for(let x = 0; x <= w; x += w/8) dctx.lineTo(x, i*bh + Math.sin(x/w*6 + i)*bh*0.12);
+    dctx.lineTo(w, (i+1)*bh + bh*0.3); dctx.lineTo(0, (i+1)*bh + bh*0.3);
+    dctx.closePath(); dctx.fill();
+  });
+  /* grit */
+  const grains = Math.round(w*h/900);
+  for(let i = 0; i < grains; i++){
+    const x = Math.random()*w, y = Math.random()*h, s = rand(1, 3.2)*dpr;
+    dctx.fillStyle = "rgba(" + (Math.random() < .5 ? "40,28,18," : "212,186,150,") + rand(.08, .3).toFixed(2) + ")";
+    dctx.fillRect(x, y, s, s);
+  }
+  /* pebbles */
+  for(let i = 0; i < Math.round(w*h/26000); i++){
+    const x = Math.random()*w, y = Math.random()*h, s = rand(4, 11)*dpr;
+    dctx.fillStyle = "rgba(58,42,30,.5)";
+    dctx.beginPath(); dctx.ellipse(x, y, s, s*rand(.5,.9), Math.random()*3, 0, 7); dctx.fill();
+  }
+}
+
+function scaleNow(){
+  const w = dirt.getBoundingClientRect().width || 1;
+  return dirt.width / w;
+}
+function brush(x, y, s){
+  s = s || scaleNow();
+  const r = dirt.width * 0.062;
+  dctx.save();
+  dctx.globalCompositeOperation = "destination-out";
+  dctx.beginPath(); dctx.arc(x*s, y*s, r, 0, 7); dctx.fill();
+  dctx.restore();
+}
+function brushLine(x0, y0, x1, y1){
+  const s = scaleNow();
+  const d = Math.hypot(x1-x0, y1-y0), steps = Math.max(1, Math.ceil(d/8));
+  for(let i = 0; i <= steps; i++) brush(x0 + (x1-x0)*i/steps, y0 + (y1-y0)*i/steps, s);
+}
+function clearedFraction(){
+  const s = document.createElement("canvas");
+  s.width = 96; s.height = 68;
+  const c = s.getContext("2d", { willReadFrequently: true });
+  c.drawImage(dirt, 0, 0, 96, 68);
+  const px = c.getImageData(0, 0, 96, 68).data;
+  let open = 0;
+  for(let i = 3; i < px.length; i += 4) if(px[i] < 40) open++;
+  return open / (96*68);
+}
+function isClearAt(px, py){
+  /* px,py in pit viewBox units */
+  const r = dirt.getBoundingClientRect();
+  const x = Math.round(px/1000 * dirt.width), y = Math.round(py/700 * dirt.height);
+  if(x < 0 || y < 0 || x >= dirt.width || y >= dirt.height) return false;
+  try{ return dctx.getImageData(x, y, 1, 1).data[3] < 60; }catch(e){ return false; }
+}
+
+function startDig(d){
+  current = d;
+  wake(); loadVoice();
+  $("#dig-title").textContent = d.site + " · " + d.place;
+  $("#dig-bar").style.width = "0%";
+  $("#dig-pct").textContent = "0%";
+  $("#dig-done").disabled = true;
+  $("#dig-done").textContent = "Keep digging…";
+  digCleared = 0;
+  show("s-dig");
+
+  /* buried arrangement: same bones, scattered and turned */
+  const bones = d.bones();
+  const slots = [[250,190],[560,180],[820,230],[200,420],[500,400],[790,470],[350,570],[640,600]];
+  let inner = '<g class="strata">'
+    + '<rect x="0" y="0" width="1000" height="700" fill="#6d5138"/>' + '</g>';
+  pitSvg.innerHTML = inner + bones.map((b,i) => '<g data-i="'+i+'">'+b.svg+'</g>').join("");
+  const groups = Array.from(pitSvg.querySelectorAll("g[data-i]"));
+  groups.forEach((g, i) => {
+    const bb = g.getBBox();
+    const cx = bb.x + bb.width/2, cy = bb.y + bb.height/2;
+    const sc = Math.min(1, 300 / Math.max(bb.width, bb.height, 1));
+    const slot = slots[i % slots.length];
+    const tx = slot[0] + rand(-40, 40), ty = slot[1] + rand(-30, 30);
+    const rot = rand(-40, 40);
+    g.setAttribute("transform",
+      "translate(" + F(tx) + "," + F(ty) + ") rotate(" + F(rot) + ") scale(" + sc.toFixed(2) + ") translate(" + F(-cx) + "," + F(-cy) + ")");
+    g.dataset.cx = tx; g.dataset.cy = ty; g.dataset.found = "0";
+  });
+
+  requestAnimationFrame(() => { dirt.width = 0; paintDirt(); });
+}
+
+function digProgress(){
+  digCleared = clearedFraction();
+  const pct = Math.min(100, Math.round(digCleared * 118));
+  $("#dig-bar").style.width = pct + "%";
+  $("#dig-pct").textContent = pct + "%";
+  /* pin a flag on each newly exposed bone */
+  pitSvg.querySelectorAll("g[data-i]").forEach(g => {
+    if(g.dataset.found === "1") return;
+    if(isClearAt(+g.dataset.cx, +g.dataset.cy)){
+      g.dataset.found = "1";
+      sfx.found();
+      const f = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      f.setAttribute("class", "flagpin");
+      f.innerHTML = '<path d="M'+P(+g.dataset.cx, +g.dataset.cy - 6)+' l0,-46" stroke="#f6f1e3" stroke-width="4"/>'
+        + '<path d="M'+P(+g.dataset.cx, +g.dataset.cy - 52)+' l30,10 l-30,10 z" fill="#ff3d7f"/>';
+      pitSvg.appendChild(f);
+    }
+  });
+  if(pct >= 55){
+    $("#dig-done").disabled = false;
+    $("#dig-done").textContent = pct >= 92 ? "All clear — build it!" : "Done digging";
+  }
+}
+
+(function digInput(){
+  let down = false, lx = 0, ly = 0;
+  const pos = e => {
+    const r = dirt.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  dirt.addEventListener("pointerdown", e => {
+    down = true; dirt.setPointerCapture(e.pointerId);
+    const p = pos(e); lx = p[0]; ly = p[1]; brush(lx, ly); sfx.scrape();
+    if(!digTimer) digTimer = setInterval(digProgress, 260);
+  });
+  dirt.addEventListener("pointermove", e => {
+    if(!down) return;
+    const p = pos(e); brushLine(lx, ly, p[0], p[1]);
+    if(Math.hypot(p[0]-lx, p[1]-ly) > 26) sfx.scrape();
+    lx = p[0]; ly = p[1];
+  });
+  const up = () => { if(!down) return; down = false; digProgress(); };
+  dirt.addEventListener("pointerup", up);
+  dirt.addEventListener("pointercancel", up);
+  dirt.addEventListener("pointerleave", up);
+})();
+
+window.addEventListener("resize", () => { if($("#s-dig").classList.contains("active")) paintDirt(); });
+
+/* ============================================================
+   BUILD
+   ============================================================ */
+const boardSvg = $("#board-svg");
+let placedCount = 0, total = 0;
+
+function startBuild(){
+  const d = current, bones = d.bones();
+  total = bones.length; placedCount = 0;
+  show("s-build");
+  boardSvg.innerHTML = "";
+  const NS = "http://www.w3.org/2000/svg";
+
+  const ghosts = document.createElementNS(NS, "g");
+  const live = document.createElementNS(NS, "g");
+  boardSvg.appendChild(ghosts); boardSvg.appendChild(live);
+
+  bones.forEach((b, i) => {
+    const gh = document.createElementNS(NS, "g");
+    gh.setAttribute("class", "ghost"); gh.dataset.for = b.id; gh.innerHTML = b.svg;
+    ghosts.appendChild(gh);
+
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "bone"); g.dataset.id = b.id; g.innerHTML = b.svg;
+    live.appendChild(g);
+
+    const bb = g.getBBox();
+    /* push the bone somewhere else on the board, but keep it fully visible */
+    let dx, dy, tries = 0;
+    do{
+      const ang = Math.random() * Math.PI * 2, dist = rand(170, 330);
+      dx = Math.cos(ang) * dist; dy = Math.sin(ang) * dist * 0.72;
+      tries++;
+    } while(tries < 40 && (bb.x + dx < 12 || bb.x + bb.width + dx > 988 || bb.y + dy < 12 || bb.y + bb.height + dy > 628));
+    dx = Math.max(12 - bb.x, Math.min(988 - bb.x - bb.width, dx));
+    dy = Math.max(12 - bb.y, Math.min(628 - bb.y - bb.height, dy));
+    g.dataset.dx = dx; g.dataset.dy = dy;
+    g.setAttribute("transform", "translate(" + F(dx) + "," + F(dy) + ")");
+  });
+
+  $("#build-count").textContent = "0 / " + total + " BONES IN PLACE";
+}
+
+function boardPt(e){
+  const r = boardSvg.getBoundingClientRect();
+  const s = r.width / 1000;
+  return [(e.clientX - r.left)/s, (e.clientY - r.top)/s];
+}
+
+(function buildInput(){
+  let drag = null, ox = 0, oy = 0;
+  boardSvg.addEventListener("pointerdown", e => {
+    const g = e.target.closest ? e.target.closest("g.bone") : null;
+    if(!g || g.classList.contains("set")) return;
+    drag = g; g.classList.add("moving");
+    g.parentNode.appendChild(g);
+    const p = boardPt(e);
+    ox = p[0] - (+g.dataset.dx); oy = p[1] - (+g.dataset.dy);
+    const gh = boardSvg.querySelector('.ghost[data-for="' + g.dataset.id + '"]');
+    if(gh) gh.classList.add("hot");
+    boardSvg.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  boardSvg.addEventListener("pointermove", e => {
+    if(!drag) return;
+    const p = boardPt(e);
+    const dx = p[0] - ox, dy = p[1] - oy;
+    drag.dataset.dx = dx; drag.dataset.dy = dy;
+    drag.setAttribute("transform", "translate(" + F(dx) + "," + F(dy) + ")");
+  });
+  const release = () => {
+    if(!drag) return;
+    const g = drag; drag = null;
+    g.classList.remove("moving");
+    const gh = boardSvg.querySelector('.ghost[data-for="' + g.dataset.id + '"]');
+    if(gh) gh.classList.remove("hot");
+    const dx = +g.dataset.dx, dy = +g.dataset.dy;
+    if(Math.hypot(dx, dy) < 62){
+      g.dataset.dx = 0; g.dataset.dy = 0;
+      g.setAttribute("transform", "translate(0,0)");
+      g.classList.add("set", "snap");
+      setTimeout(()=>g.classList.remove("snap"), 340);
+      if(gh) gh.classList.add("done");
+      placedCount++;
+      sfx.snap();
+      $("#build-count").textContent = placedCount + " / " + total + " BONES IN PLACE";
+      if(placedCount === total) setTimeout(reveal, 500);
+    }
+  };
+  boardSvg.addEventListener("pointerup", release);
+  boardSvg.addEventListener("pointercancel", release);
+})();
+
+$("#build-hint").addEventListener("click", () => {
+  const g = boardSvg.querySelector("g.bone:not(.set)");
+  if(!g) return;
+  const gh = boardSvg.querySelector('.ghost[data-for="' + g.dataset.id + '"]');
+  if(gh){ gh.classList.add("hot"); setTimeout(()=>gh.classList.remove("hot"), 2200); }
+  toast("Look for the glowing shape");
+});
+
+/* ============================================================
+   REVEAL
+   ============================================================ */
+function reveal(){
+  const d = current;
+  sfx.win();
+  $("#trophy-svg").setAttribute("viewBox", d.box || "0 0 1000 640");
+  $("#trophy-svg").innerHTML = d.bones().map(b => b.svg).join("");
+  $("#rev-site").textContent = (d.site + " · " + d.place).toUpperCase();
+  $("#rev-name").textContent = d.name;
+  $("#rev-say").textContent = "say it: " + d.say;
+  $("#rev-facts").innerHTML = d.facts.map(f => '<span class="chip">' + f + '</span>').join("");
+
+  const box = $("#rev-read"); box.innerHTML = "";
+  d.lines.forEach(line => {
+    const p = document.createElement("p");
+    p.className = "line";
+    line.split(" ").forEach(w => {
+      const b = document.createElement("button");
+      b.className = "word"; b.type = "button"; b.textContent = w;
+      b.addEventListener("click", () => {
+        document.querySelectorAll(".word.lit").forEach(x => x.classList.remove("lit"));
+        document.querySelectorAll(".read p.now").forEach(x => x.classList.remove("now"));
+        b.classList.add("lit");
+        const ms = sayWord(w);
+        setTimeout(()=>b.classList.remove("lit"), Math.max(750, ms + 260));
+      });
+      p.appendChild(b); p.appendChild(document.createTextNode(" "));
+    });
+    box.appendChild(p);
+  });
+  show("s-reveal");
+}
+
+$("#rev-speak").addEventListener("click", () => {
+  const ps = Array.from(document.querySelectorAll("#rev-read p"));
+  sayAll(current, i => {
+    ps.forEach((p, n) => p.classList.toggle("now", n === i));
+  });
+});
+$("#rev-name").addEventListener("click", () => sayName(current));
+$("#rev-keep").addEventListener("click", () => {
+  store.found[current.id] = { at: Date.now() };
+  persist();
+  renderSites(); renderShelf();
+  toast(current.name + " is in your museum!");
+  show("s-museum");
+});
+
+/* ---------- wiring ---------- */
+$("#dig-done").addEventListener("click", () => { clearInterval(digTimer); digTimer = null; startBuild(); });
+$("#dig-back").addEventListener("click", () => { clearInterval(digTimer); digTimer = null; show("s-start"); });
+$("#build-back").addEventListener("click", () => show("s-start"));
+$("#to-museum").addEventListener("click", () => { renderShelf(); show("s-museum"); });
+$("#mus-back").addEventListener("click", () => show("s-start"));
+$("#sound-toggle").addEventListener("click", e => {
+  soundOn = !soundOn;
+  e.currentTarget.textContent = "Sound: " + (soundOn ? "on" : "off");
+  if(soundOn) sfx.snap();
+});
+
+renderSites();
+renderShelf();
+</script>
+</body>
+</html>

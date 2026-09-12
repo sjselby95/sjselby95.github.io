@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Games — cyberskillscorner</title>
-<meta name="description" content="Games by Steven Selby — self-contained browser games, housed on the site and served off a virtual RTX 3060." />
+<meta name="description" content="Browser games housed on the site and served off a virtual RTX 3060 — three self-contained dinosaur games. No accounts, no ads, no tracking." />
+<meta name="theme-color" content="#000000" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Russo+One&display=swap" rel="stylesheet" />
@@ -164,9 +165,7 @@
     background: var(--metal);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 16px;
-    position: relative;
-    min-height: 148px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -180,10 +179,27 @@
     transform: translateY(-2px);
     outline: none;
   }
-  .game .icon { font-size: 26px; line-height: 1; }
+  .game .art {
+    height: 92px;
+    border-radius: 7px;
+    background: #06090a;
+    border: 1px solid var(--green-dim);
+    overflow: hidden;
+  }
+  .game .art svg { width: 100%; height: 100%; display: block; }
+  .game .tag {
+    align-self: flex-start;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--green-bright);
+    border: 1px solid var(--green-dim);
+    border-radius: 99px;
+    padding: 2px 9px;
+  }
   .game .g-name { font-size: 16px; color: var(--text); }
-  a.game:hover .g-name { color: var(--green-bright); }
-  .game .g-meta { font-size: 10px; letter-spacing: 0.5px; color: var(--text-mute); }
+  a.game:hover .g-name, a.game:focus-visible .g-name { color: var(--green-bright); }
+  .game .g-desc { font-size: 11px; line-height: 1.6; color: var(--text-mute); }
   .game .play {
     margin-top: auto;
     display: inline-flex;
@@ -195,27 +211,14 @@
   }
   .game .play::before { content: "▶"; font-size: 9px; }
 
-  .game.empty {
-    border-style: dashed;
-    border-color: #1f2822;
-    background: #0c0f12;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: var(--text-dim);
-  }
-  .game.empty .slot { font-size: 12px; letter-spacing: 1px; }
-  .game.empty .slot small { display: block; font-size: 9px; margin-top: 6px; color: #2f3a34; letter-spacing: 1px; }
-
-  .idle-banner {
+  .footnote {
     margin-top: 18px;
     text-align: center;
     font-size: 11px;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     color: var(--text-dim);
-    font-style: italic;
   }
-  .idle-banner .blip { color: var(--green); font-style: normal; }
+  .footnote .blip { color: var(--green); }
 
   /* Nav footer */
   .nav-footer {
@@ -248,9 +251,9 @@
 
   <div class="chrome">
     <div class="dots">
-      <a class="dot" href="index.html" aria-label="Go home" style="background:#ff5f57;"></a>
-      <a class="dot" href="index.html" aria-label="Go home" style="background:#febc2e;"></a>
-      <a class="dot" href="index.html" aria-label="Go home" style="background:#28c840;"></a>
+      <a class="dot" href="../index.html" aria-label="Go home" style="background:#ff5f57;"></a>
+      <a class="dot" href="../index.html" aria-label="Go home" style="background:#febc2e;"></a>
+      <a class="dot" href="../index.html" aria-label="Go home" style="background:#28c840;"></a>
     </div>
     <div class="url-bar">cyberskillscorner.xyz / games</div>
   </div>
@@ -275,8 +278,8 @@
     </div>
     <div class="stat">
       <div class="k">VRAM</div>
-      <div class="v">0.2 / 12 GB</div>
-      <div class="meter"><span style="width:2%"></span></div>
+      <div class="v">1.2 / 12 GB</div>
+      <div class="meter"><span style="width:10%"></span></div>
     </div>
     <div class="stat" style="min-width:88px">
       <div class="k">TEMP</div>
@@ -350,32 +353,92 @@
 
     <div class="game-grid">
 
-      <!--
-        ── Template for a real game (copy, fill in, remove this comment) ──
-        <a class="game" href="games/GAME_FILE.html">
-          <div class="icon">🎮</div>
-          <div class="g-name">Game Name</div>
-          <div class="g-meta">Genre · Controls</div>
-          <div class="play">PLAY</div>
-        </a>
-      -->
+      <!-- Bone Quarry -->
+      <a class="game" href="bone-quarry/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <g stroke="#2bbd79" stroke-width="2" fill="none" opacity=".55">
+              <path d="M0 30h200M0 60h200M50 0v92M100 0v92M150 0v92" stroke-dasharray="5 6"/>
+            </g>
+            <g fill="#dfe8e2">
+              <ellipse cx="100" cy="52" rx="26" ry="11"/>
+              <circle cx="128" cy="44" r="9"/>
+              <path d="M74 52 L48 44 L52 56 Z"/>
+              <rect x="86" y="60" width="5" height="16" rx="2"/>
+              <rect x="108" y="60" width="5" height="16" rx="2"/>
+            </g>
+            <path d="M100 34 v-16 l14 5 -14 5" fill="#3fe39a"/>
+          </svg>
+        </div>
+        <span class="tag">Ages 4+</span>
+        <div class="g-name">Bone Quarry</div>
+        <div class="g-desc">Brush dirt off a buried skeleton, rebuild it bone by bone, then hear it read aloud. Ten dig sites — and four of them are not dinosaurs.</div>
+        <div class="play">PLAY</div>
+      </a>
 
-      <!-- Blank state: empty cartridge slots -->
-      <div class="game empty"><div class="slot">— cartridge slot —<small>insert game</small></div></div>
-      <div class="game empty"><div class="slot">— cartridge slot —<small>insert game</small></div></div>
-      <div class="game empty"><div class="slot">— cartridge slot —<small>insert game</small></div></div>
+      <!-- Plate Run -->
+      <a class="game" href="plate-run/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <path d="M0 70h200v22H0z" fill="#13201a"/>
+            <g fill="#dfe8e2">
+              <ellipse cx="92" cy="54" rx="24" ry="15"/>
+              <circle cx="122" cy="45" r="9"/>
+              <path d="M68 52 L40 44 L46 60 Z"/>
+              <rect x="80" y="66" width="5" height="10" rx="2"/>
+              <rect x="100" y="66" width="5" height="10" rx="2"/>
+            </g>
+            <g fill="#3fe39a">
+              <path d="M78 38 l7-12 7 12z"/><path d="M92 36 l8-14 8 14z"/><path d="M107 39 l6-11 6 11z"/>
+            </g>
+            <path d="M150 70 l10-16 10 16z" fill="#1b2620" stroke="#2bbd79"/>
+          </svg>
+        </div>
+        <span class="tag">Reflexes</span>
+        <div class="g-name">Plate Run</div>
+        <div class="g-desc">An endless runner where the plates on a Stegosaurus's back are the health bar. Tap to jump, hold the corner to duck, and it never stops speeding up.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Thagomizer -->
+      <a class="game" href="thagomizer/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <path d="M0 70h200v22H0z" fill="#13201a"/>
+            <ellipse cx="100" cy="74" rx="34" ry="7" fill="none" stroke="#2bbd79" stroke-width="2"/>
+            <g fill="#dfe8e2">
+              <ellipse cx="100" cy="52" rx="22" ry="14"/>
+              <circle cx="126" cy="45" r="8"/>
+              <path d="M78 50 L48 40 L54 58 Z"/>
+            </g>
+            <g stroke="#3fe39a" stroke-width="3" stroke-linecap="round">
+              <path d="M50 40 L36 28"/><path d="M48 48 L30 44"/>
+            </g>
+            <g fill="#1b2620" stroke="#2bbd79" stroke-width="1.5">
+              <path d="M170 62 q-14-8-26-2 l4 10 24 2z"/>
+            </g>
+          </svg>
+        </div>
+        <span class="tag">Timing</span>
+        <div class="g-name">Thagomizer</div>
+        <div class="g-desc">Predators close in from both sides. Swing the spiked tail left, stomp right — but only when they're inside the ring. Swinging at nothing leaves you open.</div>
+        <div class="play">PLAY</div>
+      </a>
 
     </div>
 
-    <div class="idle-banner"><span class="blip">●</span> no cartridges loaded — arcade idle &middot; drop an .html game into /games</div>
+    <div class="footnote"><span class="blip">●</span> 3 titles loaded &middot; runs entirely in your browser &middot; scores saved locally on your device</div>
   </div>
 
   <nav class="nav-footer" aria-label="Site navigation">
-    <a href="index.html">Home</a>
-    <a href="about.html">About</a>
-    <a href="certifications.html">Certifications</a>
-    <a href="projects.html">Projects</a>
-    <a href="labs.html">Labs</a>
+    <a href="../index.html">Home</a>
+    <a href="../about.html">About</a>
+    <a href="../certifications.html">Certifications</a>
+    <a href="../projects.html">Projects</a>
+    <a href="../labs.html">Labs</a>
     <a href="https://www.flickr.com/people/192044761@N05/" target="_blank" rel="noopener">Photography</a>
     <a href="mailto:sjselby95@gmail.com">Contact</a>
   </nav>

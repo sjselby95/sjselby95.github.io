@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A Stegosaurus timing game: swing the tail, stomp, survive the waves.">
+<meta name="theme-color" content="#140f14">
+<style>
+  html{color-scheme:dark}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Thagomizer</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Saira+Stencil+One&display=swap">
+</head>
+<body>
+<style>
+:root{
+  --ink:#f2e9dc;
+  --ink-soft:#b6a591;
+  --page:#140f14;
+  --panel:#221a22;
+  --line:#3b2e3a;
+  --flag:#ff3d7f;
+  --amber:#ffb03a;
+  --display:"Saira Stencil One","Arial Narrow",sans-serif;
+  --body:"Andika","Trebuchet MS",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--page);color:var(--ink);
+  font-family:var(--body);font-size:16px;line-height:1.4;
+  -webkit-text-size-adjust:100%;overscroll-behavior:none;
+}
+#app{max-width:760px;margin:0 auto;padding:10px 10px 16px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
+.hud{
+  display:flex;align-items:center;gap:10px;justify-content:space-between;
+  background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:7px 12px;
+}
+.plates{display:flex;gap:4px;align-items:flex-end;min-height:22px}
+.plates i{display:block;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:17px solid var(--flag)}
+.plates i.gone{border-bottom-color:var(--line)}
+.score{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums}
+.wave{font-family:var(--display);font-size:12px;color:var(--ink-soft);letter-spacing:.1em}
+
+.stage{
+  position:relative;width:100%;height:min(62vh,540px);min-height:300px;
+  border:2px solid var(--line);border-radius:14px;overflow:hidden;background:#10322f;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+.overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:22px;text-align:center;background:rgba(11,16,22,.84);
+}
+.overlay.hide{display:none}
+h1{font-family:var(--display);font-size:clamp(30px,9.5vw,52px);margin:0;line-height:.95}
+h2{font-family:var(--display);font-size:clamp(24px,7vw,36px);margin:0;line-height:1}
+.lede{margin:0;max-width:36ch;color:var(--ink-soft)}
+.lede b{color:var(--ink)}
+.big{font-family:var(--display);font-size:clamp(40px,13vw,66px);line-height:.9;color:var(--flag)}
+.tip{font-size:14px;color:var(--ink-soft);max-width:32ch;margin:0}
+.btn{
+  font-family:var(--body);font-weight:700;font-size:18px;cursor:pointer;
+  background:var(--flag);color:#fff;border:0;border-radius:12px;padding:14px 26px;min-height:52px;
+  box-shadow:0 3px 0 #a8104b;
+}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none;font-size:15px;padding:10px 18px;min-height:0}
+.btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-soft);font-size:13px}
+.name{font-size:13px;color:var(--ink-soft);max-width:40ch;margin:0 auto}
+@media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
+</style>
+
+<div id="app">
+  <div class="hud">
+    <div class="plates" id="plates"></div>
+    <div class="score"><span id="score">0</span> driven off</div>
+    <div class="wave">WAVE <span id="wave">1</span> · BEST <span id="best">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+
+    <div class="overlay" id="ov-start">
+      <h1>Thagomizer</h1>
+      <p class="lede">Something is coming through the trees. Tap the <b>left</b> side to swing the spiked tail. Tap the <b>right</b> side to stomp. Only when they are inside the ring — swinging at nothing leaves you wide open.</p>
+      <button class="btn" id="go">Start</button>
+      <p class="name">Thagomizer is the real name paleontologists use for the spikes on a Stegosaurus tail.</p>
+    </div>
+
+    <div class="overlay hide" id="ov-over">
+      <h2 id="overtitle">They got through</h2>
+      <div class="big"><span id="final">0</span></div>
+      <p class="tip" id="tip"></p>
+      <button class="btn" id="again">Try again</button>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Left = tail. Right = stomp.</span>
+    <button class="btn ghost" id="sound">Sound: on</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= audio ================= */
+let AC = null, soundOn = true;
+function tone(f, dur, type, vol, slideTo){
+  if(!soundOn) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === "suspended") AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(f, AC.currentTime);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, AC.currentTime + dur);
+    g.gain.setValueAtTime(0.0001, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol || 0.12, AC.currentTime + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + dur + 0.02);
+  }catch(e){}
+}
+const sfx = {
+  swipe(){ tone(300, 0.12, "sawtooth", 0.06, 900); },
+  whack(){ tone(180, 0.16, "square", 0.13, 90); setTimeout(()=>tone(640, 0.12, "sine", 0.1), 60); },
+  stomp(){ tone(110, 0.18, "triangle", 0.14, 60); },
+  whiff(){ tone(240, 0.14, "sine", 0.05, 160); },
+  bite(){ tone(210, 0.32, "sawtooth", 0.13, 70); },
+  wave(){ [520,660,880].forEach((f,i)=>setTimeout(()=>tone(f,0.16,"sine",0.1), i*110)); },
+  over(){ [440,340,262,196].forEach((f,i)=>setTimeout(()=>tone(f,0.26,"triangle",0.12), i*150)); }
+};
+
+/* ================= canvas ================= */
+const cv = document.getElementById("cv"), g = cv.getContext("2d");
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, hh, r){
+    r = Math.min(r, w / 2, hh / 2);
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + hh, r);
+    this.arcTo(x + w, y + hh, x, y + hh, r);
+    this.arcTo(x, y + hh, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath(); return this;
+  };
+}
+const WH = 360, GY = 300;
+let WW = 640, scale = 1;
+function resize(){
+  const r = cv.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.max(2, Math.round(r.width * dpr));
+  cv.height = Math.max(2, Math.round(r.height * dpr));
+  scale = cv.height / WH;
+  WW = cv.width / scale;
+  OUTER = Math.min(150, WW * 0.38);
+  INNER = OUTER * 0.36;
+  BITE = OUTER * 0.25;
+  k = Math.min(1, WW / 430);
+}
+window.addEventListener("resize", resize);
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+
+/* ---------- scenery ---------- */
+function makeRidge(seedH, rough, len){
+  const pts = []; let y = seedH;
+  for(let i = 0; i <= len; i++){ y += rnd(-rough, rough); y = Math.max(seedH - 40, Math.min(seedH + 26, y)); pts.push(y); }
+  pts[len] = pts[0]; return pts;
+}
+const ridges = [
+  { pts: makeRidge(226, 7, 40), step: 44, col: "#1b4a44" },
+  { pts: makeRidge(250, 10, 34), step: 52, col: "#12332f" },
+  { pts: makeRidge(274, 8, 30), step: 60, col: "#0b2422" }
+];
+function drawSky(){
+  const grd = g.createLinearGradient(0, 0, 0, GY + 10);
+  grd.addColorStop(0, "#08202c");
+  grd.addColorStop(0.38, "#1b4a48");
+  grd.addColorStop(0.56, "#a85a3c");
+  grd.addColorStop(0.70, "#e8a04a");
+  grd.addColorStop(1, "#f2c887");
+  g.fillStyle = grd; g.fillRect(0, 0, WW, GY + 10);
+  g.fillStyle = "rgba(255,201,110,.72)";
+  g.beginPath(); g.arc(WW * 0.5, 208, 44, 0, 7); g.fill();
+}
+function drawRidges(){
+  ridges.forEach(l => {
+    g.fillStyle = l.col;
+    g.beginPath(); g.moveTo(-l.step, GY + 6);
+    for(let i = 0; i < l.pts.length; i++) g.lineTo(-l.step + i * l.step, l.pts[i]);
+    g.lineTo(WW + l.step, GY + 6); g.closePath(); g.fill();
+  });
+}
+function drawGround(){
+  g.fillStyle = "#3a2418"; g.fillRect(0, GY, WW, WH - GY);
+  g.fillStyle = "#4c3020"; g.fillRect(0, GY, WW, 5);
+  /* the mound he is standing on */
+  g.fillStyle = "#46291a";
+  g.beginPath(); g.ellipse(WW / 2, GY + 6, 96, 16, 0, 0, 7); g.fill();
+}
+
+/* ---------- the stegosaurus ---------- */
+function drawStego(cx, tailAng, stomp, flash){
+  g.save(); g.translate(cx, GY); g.scale(k, k);
+  if(flash) g.globalAlpha = 0.5;
+
+  /* legs, with the front pair lifting on a stomp */
+  g.strokeStyle = "#b39a72"; g.lineCap = "round"; g.lineWidth = 7;
+  const lift = stomp > 0 ? Math.sin(Math.min(1, stomp) * Math.PI) * 16 : 0;
+  [[-16, 0], [-7, 0], [11, lift], [20, lift]].forEach(l => {
+    g.beginPath(); g.moveTo(l[0], -20); g.lineTo(l[0], -2 - l[1]); g.stroke();
+  });
+
+  /* tail pivots at the hip so the spikes swing through the strike ring */
+  g.save();
+  g.translate(-24, -34); g.rotate(tailAng);
+  g.fillStyle = "#ecdfc2";
+  g.beginPath();
+  g.moveTo(0, 0); g.quadraticCurveTo(-28, -2, -52, -12);
+  g.quadraticCurveTo(-26, 10, 0, 12);
+  g.closePath(); g.fill();
+  g.strokeStyle = "#ecdfc2"; g.lineWidth = 4.5; g.lineCap = "round";
+  [[-46, -18, -56, -32], [-38, -12, -46, -28], [-52, -10, -64, -18], [-46, -4, -60, -6]].forEach(s => {
+    g.beginPath(); g.moveTo(s[0], s[1]); g.lineTo(s[2], s[3]); g.stroke();
+  });
+  g.restore();
+
+  g.fillStyle = "#ecdfc2";
+  g.beginPath(); g.ellipse(0, -34, 32, 23, 0, 0, 7); g.fill();
+  g.beginPath();
+  g.moveTo(20, -46); g.quadraticCurveTo(36, -54, 44, -50);
+  g.quadraticCurveTo(38, -34, 22, -28); g.closePath(); g.fill();
+  g.beginPath(); g.ellipse(46, -48, 13, 10, -0.15, 0, 7); g.fill();
+  g.fillStyle = "#2b2219";
+  g.beginPath(); g.arc(50, -51, 2.6, 0, 7); g.fill();
+
+  const slots = [[-22, 12], [-11, 17], [0, 19], [11, 16], [21, 11]];
+  g.fillStyle = "#ff3d7f";
+  slots.forEach(s => {
+    g.beginPath(); g.moveTo(s[0] - 8, -52); g.lineTo(s[0], -52 - s[1]); g.lineTo(s[0] + 8, -52); g.closePath(); g.fill();
+  });
+  g.restore();
+}
+
+/* ---------- attackers ---------- */
+function drawBiter(a, t){
+  const d = a.side;                       /* -1 comes from the left, +1 from the right */
+  g.save(); g.translate(a.x, GY); g.scale(-d * k, k);
+  const s = a.big ? 1.3 : 1.12;
+  const bob = Math.sin(t * 12 + a.seed) * 2;
+
+  g.fillStyle = "rgba(0,0,0,.30)";
+  g.beginPath(); g.ellipse(-4, -3, 36 * s, 6, 0, 0, 7); g.fill();
+
+  g.save(); g.scale(s, s); g.translate(0, bob);
+
+  const stride = Math.sin(t * 13 + a.seed), stride2 = Math.sin(t * 13 + a.seed + 2.3);
+  g.strokeStyle = "#24403a"; g.lineWidth = 6; g.lineCap = "round"; g.lineJoin = "round";
+  [[-12, stride], [4, stride2]].forEach(l => {
+    g.beginPath();
+    g.moveTo(l[0], -32);
+    g.lineTo(l[0] - 7 + l[1] * 5, -18);
+    g.lineTo(l[0] + 3 + l[1] * 9, -3);
+    g.stroke();
+  });
+
+  const body = a.flash > 0 ? "#ffe9b0" : "#33574e";
+  g.fillStyle = body;
+  g.strokeStyle = "rgba(242,200,135,.6)";
+  g.lineWidth = 2; g.lineJoin = "round";
+
+  /* tail, held out straight behind */
+  g.beginPath();
+  g.moveTo(-14, -44);
+  g.quadraticCurveTo(-42, -44, -64, -34);
+  g.quadraticCurveTo(-40, -32, -14, -32);
+  g.closePath(); g.fill(); g.stroke();
+
+  /* crouched torso */
+  g.beginPath(); g.ellipse(-4, -38, 22, 14, -0.08, 0, 7); g.fill(); g.stroke();
+
+  /* neck */
+  g.beginPath();
+  g.moveTo(10, -46); g.quadraticCurveTo(20, -56, 26, -58);
+  g.lineTo(28, -48); g.quadraticCurveTo(20, -44, 12, -38);
+  g.closePath(); g.fill(); g.stroke();
+
+  /* head, jaws open */
+  g.beginPath();
+  g.moveTo(22, -62); g.lineTo(46, -57); g.lineTo(46, -51); g.lineTo(22, -50);
+  g.closePath(); g.fill(); g.stroke();
+  g.beginPath();
+  g.moveTo(23, -49); g.lineTo(44, -43); g.lineTo(44, -47); g.lineTo(23, -47);
+  g.closePath(); g.fill(); g.stroke();
+
+  g.fillStyle = "#ffe9b0";
+  for(let i = 0; i < 4; i++){
+    const x = 28 + i * 5;
+    g.beginPath(); g.moveTo(x, -51); g.lineTo(x + 3, -51); g.lineTo(x + 1.5, -47); g.closePath(); g.fill();
+  }
+  g.fillStyle = "#ffb03a";
+  g.beginPath(); g.arc(28, -57, 3.2, 0, 7); g.fill();
+
+  g.restore();
+  g.restore();
+}
+
+/* ================= game ================= */
+const S = { ready: 0, play: 1, over: 2 };
+let state = S.ready;
+let plates, score, wave, best, atk, cool, tail, stomp, shake, banner, waveQueue, spawnT, invuln, t = 0, last = 0;
+const MAXP = 3;
+let INNER = 66, OUTER = 168, BITE = 54, k = 1;
+
+try{ best = +(localStorage.getItem("thago.best") || 0) || 0; }catch(e){ best = 0; }
+
+function reset(){
+  plates = MAXP; score = 0; wave = 0; atk = [];
+  cool = { "-1": 0, "1": 0 }; tail = { ang: 0, v: 0 };
+  stomp = 0; shake = 0; banner = 0; spawnT = 0; waveQueue = []; invuln = 0;
+  nextWave();
+  paintHud();
+}
+function paintHud(){
+  const box = document.getElementById("plates"); box.innerHTML = "";
+  for(let i = 0; i < MAXP; i++){
+    const el = document.createElement("i");
+    if(i >= plates) el.className = "gone";
+    box.appendChild(el);
+  }
+  document.getElementById("score").textContent = score;
+  document.getElementById("wave").textContent = Math.max(1, wave);
+  document.getElementById("best").textContent = best;
+}
+function nextWave(){
+  wave++;
+  const n = 2 + wave;
+  const sp = Math.min(126, 44 + wave * 6);
+  waveQueue = [];
+  for(let i = 0; i < n; i++){
+    waveQueue.push({
+      side: Math.random() < 0.5 ? -1 : 1,
+      speed: sp * rnd(0.9, 1.12),
+      feint: wave >= 3 && Math.random() < 0.28,
+      big: wave >= 5 && Math.random() < 0.22,
+      delay: i === 0 ? 0.9 : Math.max(0.5, 1.7 - wave * 0.09) * rnd(0.85, 1.2)
+    });
+  }
+  spawnT = waveQueue[0].delay;
+  banner = 1.6;
+  if(wave > 1) sfx.wave();
+  paintHud();
+}
+function spawnOne(){
+  const q = waveQueue.shift();
+  if(!q) return;
+  atk.push({
+    side: q.side, x: q.side < 0 ? -60 : WW + 60, speed: q.speed,
+    hp: q.big ? 2 : 1, big: q.big, feint: q.feint, feintDone: false,
+    state: "in", flash: 0, seed: rnd(0, 7)
+  });
+  if(waveQueue.length) spawnT = waveQueue[0].delay;
+}
+
+function strike(side){
+  if(state !== S.play) return;
+  if(cool[side] > 0) return;
+  if(side < 0){ tail.v = -13; sfx.swipe(); } else { stomp = 1; sfx.swipe(); }
+
+  const cx = WW / 2;
+  let target = null, bestD = 1e9;
+  atk.forEach(a => {
+    if(a.side !== side || a.state !== "in") return;
+    const d = Math.abs(a.x - cx);
+    if(d >= INNER && d <= OUTER && d < bestD){ bestD = d; target = a; }
+  });
+  if(target){
+    target.hp--; target.flash = 0.14;
+    if(target.hp <= 0){
+      target.state = "flee"; target.speed = 210 + Math.random() * 60;
+      score++; shake = 0.7;
+      side < 0 ? sfx.whack() : sfx.stomp();
+      paintHud();
+    } else {
+      target.x += side < 0 ? -26 : 26;
+      sfx.whack();
+    }
+    cool[side] = 0.28;
+  } else {
+    sfx.whiff();
+    cool[side] = 0.62;          /* swinging at nothing leaves you open */
+  }
+}
+
+function step(dt){
+  t += dt;
+  if(banner > 0) banner -= dt;
+  if(shake > 0) shake = Math.max(0, shake - dt * 2.4);
+  if(invuln > 0) invuln -= dt;
+  cool["-1"] = Math.max(0, cool["-1"] - dt);
+  cool["1"] = Math.max(0, cool["1"] - dt);
+
+  /* tail spring */
+  tail.v += (0 - tail.ang) * 46 * dt;
+  tail.v *= 0.86;
+  tail.ang += tail.v * dt;
+  if(stomp > 0) stomp = Math.max(0, stomp - dt * 4);
+
+  if(waveQueue.length){
+    spawnT -= dt;
+    if(spawnT <= 0) spawnOne();
+  } else if(atk.length === 0){
+    nextWave();
+  }
+
+  const cx = WW / 2;
+  for(let i = atk.length - 1; i >= 0; i--){
+    const a = atk[i];
+    if(a.flash > 0) a.flash -= dt;
+    const d = Math.abs(a.x - cx);
+
+    if(a.state === "in"){
+      if(a.feint && !a.feintDone && d < OUTER + 16){
+        a.state = "back"; a.hold = 0.5 + Math.random() * 0.4;
+      } else {
+        a.x += (cx - a.x > 0 ? 1 : -1) * a.speed * dt;
+        if(d <= BITE){
+          a.state = "flee"; a.speed = 150;
+          if(invuln <= 0){
+            plates--; invuln = 0.9; shake = 1; sfx.bite(); paintHud();
+            if(plates <= 0){ return gameOver(); }
+          }
+        }
+      }
+    } else if(a.state === "back"){
+      a.x += a.side * a.speed * 0.8 * dt;
+      a.hold -= dt;
+      if(a.hold <= 0){ a.state = "in"; a.feintDone = true; a.speed *= 1.18; }
+    } else if(a.state === "flee"){
+      a.x += a.side * a.speed * dt;
+      if(a.x < -140 || a.x > WW + 140) atk.splice(i, 1);
+    }
+  }
+}
+
+function draw(){
+  g.setTransform(scale, 0, 0, scale, 0, 0);
+  if(shake > 0) g.translate(rnd(-4, 4) * shake, rnd(-3, 3) * shake);
+  drawSky(); drawRidges(); drawGround();
+
+  const cx = WW / 2;
+  /* strike rings — the whole game is reading these */
+  [-1, 1].forEach(side => {
+    const live = atk.some(a => a.side === side && a.state === "in" && Math.abs(a.x - cx) >= INNER && Math.abs(a.x - cx) <= OUTER);
+    const x0 = cx + side * INNER, x1 = cx + side * OUTER;
+    g.strokeStyle = live ? "rgba(255,61,127,.95)" : (cool[side] > 0 ? "rgba(150,130,130,.45)" : "rgba(242,200,135,.55)");
+    g.lineWidth = live ? 4 : 2.5;
+    g.beginPath();
+    g.ellipse((x0 + x1) / 2, GY + 8, Math.abs(x1 - x0) / 2, 14, 0, 0, 7);
+    g.stroke();
+    if(live){
+      g.fillStyle = "rgba(255,61,127,.16)";
+      g.beginPath(); g.ellipse((x0 + x1) / 2, GY + 8, Math.abs(x1 - x0) / 2, 14, 0, 0, 7); g.fill();
+    }
+  });
+
+  atk.forEach(a => drawBiter(a, t));
+  drawStego(cx, tail.ang, stomp, invuln > 0 && Math.floor(invuln * 12) % 2 === 0);
+
+  /* side labels so a new player knows which half does what */
+  g.font = "600 15px Andika, sans-serif";
+  g.textBaseline = "middle";
+  g.fillStyle = "rgba(242,233,220,.44)";
+  g.textAlign = "left";  g.fillText("TAIL", 14, WH - 20);
+  g.textAlign = "right"; g.fillText("STOMP", WW - 14, WH - 20);
+  g.textAlign = "center";
+
+  if(banner > 0 && state === S.play){
+    g.globalAlpha = Math.min(1, banner);
+    g.fillStyle = "#f2e9dc";
+    g.font = "34px 'Saira Stencil One', sans-serif";
+    g.fillText("WAVE " + wave, cx, 92);
+    g.globalAlpha = 1;
+  }
+}
+
+let raf = null;
+function frame(ts){
+  if(!last) last = ts;
+  const dt = Math.min(0.05, (ts - last) / 1000);
+  last = ts;
+  if(state === S.play) step(dt);
+  draw();
+  raf = requestAnimationFrame(frame);
+}
+
+const TIPS = [
+  "Wait until the ring turns pink before you swing.",
+  "Swinging at nothing locks you out for a moment.",
+  "Some of them fake a charge. Let those come back.",
+  "The big ones take two hits.",
+  "Left side is always the tail. Right side is always the stomp."
+];
+function start(){
+  reset(); state = S.play; last = 0;
+  document.getElementById("ov-start").classList.add("hide");
+  document.getElementById("ov-over").classList.add("hide");
+}
+function gameOver(){
+  state = S.over;
+  if(score > best){ best = score; try{ localStorage.setItem("thago.best", String(best)); }catch(e){} }
+  paintHud();
+  document.getElementById("final").textContent = score;
+  document.getElementById("overtitle").textContent = score >= 20 ? "You held the ridge" : "They got through";
+  document.getElementById("tip").textContent = pick(TIPS);
+  document.getElementById("ov-over").classList.remove("hide");
+  sfx.over();
+}
+
+const stage = document.getElementById("stage");
+stage.addEventListener("pointerdown", e => {
+  if(state !== S.play) return;
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width;
+  strike(x < 0.5 ? -1 : 1);
+  e.preventDefault();
+}, { passive: false });
+window.addEventListener("keydown", e => {
+  if(e.code === "ArrowLeft"){ strike(-1); e.preventDefault(); }
+  if(e.code === "ArrowRight"){ strike(1); e.preventDefault(); }
+});
+
+document.getElementById("go").addEventListener("click", start);
+document.getElementById("again").addEventListener("click", start);
+document.getElementById("sound").addEventListener("click", e => {
+  soundOn = !soundOn;
+  e.currentTarget.textContent = "Sound: " + (soundOn ? "on" : "off");
+  if(soundOn) sfx.whack();
+});
+document.addEventListener("visibilitychange", () => { if(!document.hidden) last = 0; });
+
+resize();
+reset();
+state = S.ready;
+raf = requestAnimationFrame(frame);
+</script>
+</body>
+</html>

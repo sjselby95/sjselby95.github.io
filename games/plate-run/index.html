@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A Stegosaurus endless runner where the plates on his back are his lives.">
+<meta name="theme-color" content="#140f14">
+<style>
+  html{color-scheme:dark}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Plate Run</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Saira+Stencil+One&display=swap">
+</head>
+<body>
+<style>
+:root{
+  --ink:#f2e9dc;
+  --ink-soft:#b6a591;
+  --page:#140f14;
+  --panel:#221a22;
+  --line:#3b2e3a;
+  --flag:#ff3d7f;
+  --amber:#ffb03a;
+  --bone:#ecdfc2;
+  --display:"Saira Stencil One","Arial Narrow",sans-serif;
+  --body:"Andika","Trebuchet MS",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--page);color:var(--ink);
+  font-family:var(--body);font-size:16px;line-height:1.4;
+  -webkit-text-size-adjust:100%;overscroll-behavior:none;
+}
+#app{max-width:760px;margin:0 auto;padding:10px 10px 16px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
+
+.hud{
+  display:flex;align-items:center;gap:12px;justify-content:space-between;
+  background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:7px 12px;
+}
+.plates{display:flex;gap:4px;align-items:flex-end;min-height:22px}
+.plates i{
+  display:block;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;
+  border-bottom:17px solid var(--flag);
+}
+.plates i.gone{border-bottom-color:var(--line)}
+.dist{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.best{font-family:var(--display);font-size:12px;color:var(--ink-soft);letter-spacing:.1em}
+
+.stage{
+  position:relative;width:100%;height:min(62vh,540px);min-height:300px;
+  border:2px solid var(--line);border-radius:14px;overflow:hidden;background:#10322f;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+.overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:22px;text-align:center;background:rgba(11,16,22,.82);
+}
+.overlay.hide{display:none}
+h1{font-family:var(--display);font-size:clamp(32px,10vw,54px);margin:0;line-height:.95;letter-spacing:.01em}
+h2{font-family:var(--display);font-size:clamp(24px,7vw,36px);margin:0;line-height:1}
+.lede{margin:0;max-width:34ch;color:var(--ink-soft)}
+.big{font-family:var(--display);font-size:clamp(40px,13vw,66px);line-height:.9;color:var(--flag)}
+.tip{font-size:14px;color:var(--ink-soft);max-width:32ch;margin:0}
+.btn{
+  font-family:var(--body);font-weight:700;font-size:18px;cursor:pointer;
+  background:var(--flag);color:#fff;border:0;border-radius:12px;padding:14px 26px;min-height:52px;
+  box-shadow:0 3px 0 #a8104b;
+}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none;font-size:15px;padding:10px 18px;min-height:0}
+.btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+.keys{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:14px;color:var(--ink-soft)}
+.keys b{color:var(--ink);font-weight:700}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-soft);font-size:13px}
+@media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
+</style>
+
+<div id="app">
+  <div class="hud">
+    <div class="plates" id="plates" aria-label="plates left"></div>
+    <div class="dist"><span id="dist">0</span> m</div>
+    <div class="best">BEST <span id="best">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+
+    <div class="overlay" id="ov-start">
+      <h1>Plate Run</h1>
+      <p class="lede">The plates on his back are his lives. Lose one every time you hit something — grab loose plates to get them back.</p>
+      <button class="btn" id="go">Start running</button>
+      <div class="keys"><span><b>Tap</b> to jump — hold for higher</span><span><b>Hold the corner</b> to duck</span></div>
+    </div>
+
+    <div class="overlay hide" id="ov-over">
+      <h2>Out of plates</h2>
+      <div class="big"><span id="score">0</span> m</div>
+      <p class="tip" id="tip"></p>
+      <button class="btn" id="again">Run again</button>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span id="hint">Ferns are safe. Rocks and logs are not.</span>
+    <button class="btn ghost" id="sound">Sound: on</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= audio ================= */
+let AC = null, soundOn = true;
+function tone(f, dur, type, vol, slideTo){
+  if(!soundOn) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === "suspended") AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(f, AC.currentTime);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, AC.currentTime + dur);
+    g.gain.setValueAtTime(0.0001, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol || 0.12, AC.currentTime + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + dur + 0.02);
+  }catch(e){}
+}
+const sfx = {
+  jump(){ tone(360, 0.16, "square", 0.07, 620); },
+  land(){ tone(150, 0.07, "sine", 0.06); },
+  hit(){ tone(190, 0.3, "sawtooth", 0.12, 70); },
+  pick(){ tone(700, 0.1, "sine", 0.12); setTimeout(()=>tone(1050, 0.14, "sine", 0.1), 80); },
+  over(){ [420,330,260,190].forEach((f,i)=>setTimeout(()=>tone(f,0.26,"triangle",0.12), i*150)); },
+  mile(){ tone(880, 0.09, "sine", 0.08); }
+};
+
+/* ================= canvas ================= */
+const cv = document.getElementById("cv"), g = cv.getContext("2d");
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, hh, r){
+    r = Math.min(r, w / 2, hh / 2);
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + hh, r);
+    this.arcTo(x + w, y + hh, x, y + hh, r);
+    this.arcTo(x, y + hh, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
+    return this;
+  };
+}
+const WH = 360;                 /* world is always 360 units tall */
+let WW = 640, dpr = 1, scale = 1;
+const GY = 298;                 /* ground line */
+
+function resize(){
+  const r = cv.getBoundingClientRect();
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.max(2, Math.round(r.width * dpr));
+  cv.height = Math.max(2, Math.round(r.height * dpr));
+  scale = cv.height / WH;
+  WW = cv.width / scale;
+}
+window.addEventListener("resize", resize);
+
+/* ================= world bits ================= */
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+
+/* a repeating ridge silhouette, generated once per layer */
+function makeRidge(seedH, rough, len){
+  const pts = [];
+  let y = seedH;
+  for(let i = 0; i <= len; i++){
+    y += rnd(-rough, rough);
+    y = Math.max(seedH - 46, Math.min(seedH + 30, y));
+    pts.push(y);
+  }
+  pts[len] = pts[0];
+  return pts;
+}
+const ridges = [
+  { pts: makeRidge(224, 7, 34), step: 46, col: "#1b4a44", par: 0.12 },
+  { pts: makeRidge(248, 10, 30), step: 54, col: "#12332f", par: 0.26 },
+  { pts: makeRidge(272, 8, 26), step: 62, col: "#0b2422", par: 0.46 }
+];
+
+function drawSky(){
+  const grd = g.createLinearGradient(0, 0, 0, GY + 10);
+  grd.addColorStop(0, "#08202c");
+  grd.addColorStop(0.38, "#1b4a48");
+  grd.addColorStop(0.56, "#a85a3c");
+  grd.addColorStop(0.70, "#e8a04a");
+  grd.addColorStop(1, "#f2c887");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, WW, GY + 10);
+  /* low sun */
+  g.fillStyle = "rgba(255,201,110,.75)";
+  g.beginPath(); g.arc(WW * 0.72, 214, 46, 0, 7); g.fill();
+}
+function drawRidge(layer, camX){
+  const off = (camX * layer.par) % layer.step;
+  g.fillStyle = layer.col;
+  g.beginPath();
+  g.moveTo(-off - layer.step, GY + 6);
+  for(let i = 0; i < layer.pts.length; i++){
+    g.lineTo(-off - layer.step + i * layer.step, layer.pts[i]);
+  }
+  g.lineTo(WW + layer.step, GY + 6);
+  g.closePath(); g.fill();
+}
+function drawGround(camX){
+  g.fillStyle = "#3a2418";
+  g.fillRect(0, GY, WW, WH - GY);
+  g.fillStyle = "#4c3020";
+  g.fillRect(0, GY, WW, 5);
+  /* passing grit so speed reads even on empty ground */
+  g.fillStyle = "rgba(233,210,170,.30)";
+  for(let i = 0; i < 40; i++){
+    const x = ((i * 137 - camX * 1) % (WW + 60) + WW + 60) % (WW + 60) - 30;
+    const y = GY + 12 + (i * 53) % 44;
+    g.fillRect(x, y, 9, 2);
+  }
+}
+
+/* ---------- the star of the show ---------- */
+function drawStego(x, feetY, run, duck, plates, flash){
+  g.save();
+  g.translate(x, feetY);
+  if(duck) g.scale(1, 0.62);
+  if(flash) g.globalAlpha = 0.45;
+
+  const legA = Math.sin(run * 11) * 9, legB = Math.sin(run * 11 + 2.1) * 9;
+  g.strokeStyle = "#b39a72"; g.lineCap = "round"; g.lineWidth = 7;
+  [[-15, legA], [-6, legB], [10, -legB], [19, -legA]].forEach(l => {
+    g.beginPath(); g.moveTo(l[0], -20); g.lineTo(l[0] + l[1] * 0.5, -2); g.stroke();
+  });
+
+  /* tail */
+  g.fillStyle = "#ecdfc2";
+  g.beginPath();
+  g.moveTo(-24, -34); g.quadraticCurveTo(-52, -36, -76, -46);
+  g.quadraticCurveTo(-50, -24, -24, -22);
+  g.closePath(); g.fill();
+  g.strokeStyle = "#ecdfc2"; g.lineWidth = 4;
+  [[-70, -52, -80, -66], [-62, -46, -70, -62], [-76, -44, -88, -52], [-70, -38, -84, -40]].forEach(s => {
+    g.beginPath(); g.moveTo(s[0], s[1]); g.lineTo(s[2], s[3]); g.stroke();
+  });
+
+  /* body */
+  g.fillStyle = "#ecdfc2";
+  g.beginPath(); g.ellipse(0, -34, 32, 23, 0, 0, 7); g.fill();
+
+  /* neck + head, facing right */
+  g.beginPath();
+  g.moveTo(20, -46); g.quadraticCurveTo(36, -54, 44, -50);
+  g.quadraticCurveTo(38, -34, 22, -28);
+  g.closePath(); g.fill();
+  g.beginPath(); g.ellipse(46, -48, 13, 10, -0.15, 0, 7); g.fill();
+  g.fillStyle = "#2b2219";
+  g.beginPath(); g.arc(50, -51, 2.6, 0, 7); g.fill();
+
+  /* the plates ARE the health bar */
+  const slots = [[-22, 12], [-11, 17], [0, 19], [11, 16], [21, 11]];
+  for(let i = 0; i < 5; i++){
+    const s = slots[i], has = i < plates;
+    g.fillStyle = has ? "#ff3d7f" : "rgba(236,223,194,.16)";
+    g.beginPath();
+    g.moveTo(s[0] - 8, -52); g.lineTo(s[0], -52 - s[1]); g.lineTo(s[0] + 8, -52);
+    g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
+function drawRock(o){
+  g.fillStyle = "#2a2f2c";
+  g.beginPath();
+  g.moveTo(o.x, GY);
+  g.lineTo(o.x + o.w * 0.18, GY - o.h * 0.8);
+  g.lineTo(o.x + o.w * 0.55, GY - o.h);
+  g.lineTo(o.x + o.w, GY - o.h * 0.35);
+  g.lineTo(o.x + o.w, GY);
+  g.closePath(); g.fill();
+  g.fillStyle = "rgba(255,255,255,.07)";
+  g.fillRect(o.x + o.w * 0.2, GY - o.h * 0.7, o.w * 0.2, o.h * 0.5);
+}
+function drawLog(o){
+  g.fillStyle = "#402a1c";
+  g.beginPath(); g.roundRect(o.x, GY - o.h, o.w, o.h, 9); g.fill();
+  g.fillStyle = "#573823";
+  g.beginPath(); g.ellipse(o.x + o.w, GY - o.h / 2, 5, o.h / 2, 0, 0, 7); g.fill();
+}
+function drawPtero(o, t){
+  const flap = Math.sin(t * 9) * 12;
+  g.fillStyle = "#3b4f52";
+  g.strokeStyle = "rgba(242,200,135,.85)"; g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(o.x, o.y);
+  g.lineTo(o.x + 26, o.y - 14 - flap);
+  g.lineTo(o.x + 44, o.y + 2);
+  g.lineTo(o.x + 26, o.y + 10);
+  g.closePath(); g.fill(); g.stroke();
+  g.beginPath();
+  g.moveTo(o.x + 40, o.y - 2); g.lineTo(o.x + 62, o.y + 1); g.lineTo(o.x + 40, o.y + 6);
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = "#ffb03a";
+  g.beginPath(); g.arc(o.x + 44, o.y, 1.8, 0, 7); g.fill();
+}
+function drawFern(o){
+  g.strokeStyle = "#14332c"; g.lineWidth = 3; g.lineCap = "round";
+  for(let i = -2; i <= 2; i++){
+    g.beginPath(); g.moveTo(o.x, GY);
+    g.quadraticCurveTo(o.x + i * 7, GY - o.h * 0.7, o.x + i * 13, GY - o.h);
+    g.stroke();
+  }
+}
+function drawPlatePickup(o, t){
+  const bob = Math.sin(t * 4 + o.x) * 4;
+  g.save(); g.translate(o.x + 10, o.y + bob);
+  g.fillStyle = "rgba(255,61,127,.22)";
+  g.beginPath(); g.arc(0, -8, 20, 0, 7); g.fill();
+  g.fillStyle = "#ff3d7f";
+  g.beginPath(); g.moveTo(-11, 2); g.lineTo(0, -22); g.lineTo(11, 2); g.closePath(); g.fill();
+  g.restore();
+}
+
+/* ================= game state ================= */
+const S = { ready: 0, run: 1, over: 2 };
+let state = S.ready;
+let stego, obs, camX, dist, speed, plates, invuln, shake, nextSpawn, nextPlate, run, last, best, milestone;
+
+const MAXP = 5;
+try{ best = +(localStorage.getItem("platerun.best") || 0) || 0; }catch(e){ best = 0; }
+
+function reset(){
+  stego = { x: 96, y: GY, vy: 0, onGround: true, duck: false };
+  obs = [];
+  camX = 0; dist = 0; speed = 190; plates = 4; invuln = 0; shake = 0; run = 0;
+  nextSpawn = 460; nextPlate = 900; milestone = 100;
+  /* a little scenery so the first frame is not an empty plain */
+  for(let i = 0; i < 6; i++) obs.push({ type: "fern", x: rnd(200, 900), h: rnd(16, 30), deco: true });
+  paintHud();
+}
+function paintHud(){
+  const box = document.getElementById("plates");
+  box.innerHTML = "";
+  for(let i = 0; i < MAXP; i++){
+    const el = document.createElement("i");
+    if(i >= plates) el.className = "gone";
+    box.appendChild(el);
+  }
+  document.getElementById("dist").textContent = Math.floor(dist);
+  document.getElementById("best").textContent = Math.floor(best);
+}
+
+/* ---------- spawning ---------- */
+function spawn(){
+  const far = camX + WW + 60;
+  const hard = dist;
+  const r = Math.random();
+  if(hard > 250 && r < 0.28){
+    obs.push({ type: "ptero", x: far, y: GY - rnd(42, 52), w: 58, h: 22 });
+  } else if(r < 0.5){
+    obs.push({ type: "rock", x: far, w: rnd(24, 36), h: rnd(22, 38) });
+  } else {
+    obs.push({ type: "log", x: far, w: rnd(42, 58), h: rnd(16, 24) });
+  }
+  /* doubles once he has the hang of it */
+  if(hard > 500 && Math.random() < 0.3){
+    const t = Math.random() < 0.5 ? "rock" : "log";
+    obs.push({ type: t, x: far + rnd(78, 104), w: t === "rock" ? rnd(22, 32) : rnd(38, 50), h: t === "rock" ? rnd(20, 32) : rnd(16, 22) });
+  }
+  if(Math.random() < 0.6) obs.push({ type: "fern", x: far + rnd(30, 240), h: rnd(14, 30), deco: true });
+
+  const gapT = Math.max(0.60, 1.18 - dist * 0.00042);
+  nextSpawn = camX + speed * gapT + rnd(0, 40);
+}
+
+function hitbox(o){
+  if(o.type === "rock") return { x: o.x + 3, y: GY - o.h, w: o.w - 6, h: o.h };
+  if(o.type === "log") return { x: o.x + 4, y: GY - o.h, w: o.w - 8, h: o.h };
+  if(o.type === "ptero") return { x: o.x + 8, y: o.y - 8, w: 44, h: 17 };
+  if(o.type === "plate") return { x: o.x - 4, y: o.y - 24, w: 28, h: 30 };
+  return null;
+}
+function stegoBox(){
+  const h = stego.duck && stego.onGround ? 30 : 50;
+  return { x: stego.x - 14, y: stego.y - h, w: 34, h: h };
+}
+function overlap(a, b){
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* ---------- loop ---------- */
+function step(dt){
+  run += dt;
+  speed = Math.min(460, 190 + dist * 0.30);
+  camX += speed * dt;
+  dist += speed * dt / 10;
+
+  if(Math.floor(dist) >= milestone){ milestone += 100; sfx.mile(); }
+
+  /* stego physics — holding the tap floats him a little higher */
+  const grav = (stego.vy < 0 && holding) ? 1400 : 1900;
+  stego.vy += grav * dt;
+  stego.y += stego.vy * dt;
+  if(stego.y >= GY){
+    if(!stego.onGround) sfx.land();
+    stego.y = GY; stego.vy = 0; stego.onGround = true;
+  } else stego.onGround = false;
+  stego.x = 96;
+
+  if(camX > nextSpawn) spawn();
+  if(camX > nextPlate && plates < MAXP){
+    obs.push({ type: "plate", x: camX + WW + 40, y: GY - rnd(52, 96) });
+    nextPlate = camX + rnd(2400, 4200);
+  } else if(camX > nextPlate){
+    nextPlate = camX + 1200;
+  }
+
+  if(invuln > 0) invuln -= dt;
+  if(shake > 0) shake = Math.max(0, shake - dt * 3);
+
+  const sb = stegoBox();
+  for(let i = obs.length - 1; i >= 0; i--){
+    const o = obs[i];
+    o.x -= speed * dt;
+    if(o.x < -140){ obs.splice(i, 1); continue; }
+    if(o.deco) continue;
+    const hb = hitbox(o);
+    if(!hb) continue;
+    if(overlap(sb, hb)){
+      if(o.type === "plate"){
+        obs.splice(i, 1);
+        plates = Math.min(MAXP, plates + 1);
+        paintHud(); sfx.pick();
+      } else if(invuln <= 0){
+        plates--; invuln = 1.3; shake = 1;
+        paintHud(); sfx.hit();
+        if(plates <= 0) return gameOver();
+      }
+    }
+  }
+  document.getElementById("dist").textContent = Math.floor(dist);
+}
+
+function draw(){
+  g.setTransform(scale, 0, 0, scale, 0, 0);
+  if(shake > 0){
+    g.translate(rnd(-4, 4) * shake, rnd(-3, 3) * shake);
+  }
+  drawSky();
+  ridges.forEach(l => drawRidge(l, camX));
+  drawGround(camX);
+
+  obs.forEach(o => {
+    if(o.type === "fern") drawFern(o);
+    else if(o.type === "rock") drawRock(o);
+    else if(o.type === "log") drawLog(o);
+    else if(o.type === "ptero") drawPtero(o, run);
+    else if(o.type === "plate") drawPlatePickup(o, run);
+  });
+
+  const blink = invuln > 0 && Math.floor(invuln * 12) % 2 === 0;
+  drawStego(stego.x, stego.y, stego.onGround ? run : 0.0, stego.duck && stego.onGround, plates, blink);
+
+  /* duck pad, drawn in the corner so the control is discoverable */
+  const pw = Math.min(150, WW * 0.32), ph = 54;
+  g.fillStyle = ducking ? "rgba(255,61,127,.30)" : "rgba(0,0,0,.22)";
+  g.strokeStyle = "rgba(236,223,194,.28)"; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(10, WH - ph - 10, pw, ph, 12); g.fill(); g.stroke();
+  g.fillStyle = "rgba(236,223,194,.75)";
+  g.font = "600 17px " + "Andika, sans-serif";
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText("DUCK", 10 + pw / 2, WH - ph / 2 - 10);
+}
+
+let raf = null;
+function frame(ts){
+  if(!last) last = ts;
+  const dt = Math.min(0.05, (ts - last) / 1000);
+  last = ts;
+  if(state === S.run) step(dt);
+  draw();
+  raf = requestAnimationFrame(frame);
+}
+
+/* ---------- transitions ---------- */
+const TIPS = [
+  "Hold your finger down for a taller jump.",
+  "Pterosaurs fly at head height — duck, do not jump.",
+  "Pink plates on the ground give you a life back.",
+  "Ferns are scenery. Run straight through them.",
+  "Two rocks together need one long jump, not two short ones."
+];
+function start(){
+  reset();
+  state = S.run;
+  last = 0;
+  document.getElementById("ov-start").classList.add("hide");
+  document.getElementById("ov-over").classList.add("hide");
+}
+function gameOver(){
+  state = S.over;
+  if(dist > best){
+    best = dist;
+    try{ localStorage.setItem("platerun.best", String(Math.floor(best))); }catch(e){}
+  }
+  paintHud();
+  document.getElementById("score").textContent = Math.floor(dist);
+  document.getElementById("tip").textContent = pick(TIPS);
+  document.getElementById("ov-over").classList.remove("hide");
+  sfx.over();
+}
+
+/* ---------- input ---------- */
+let holding = false, ducking = false, duckPointer = null;
+function inDuckPad(e){
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width * WW;
+  const y = (e.clientY - r.top) / r.height * WH;
+  const pw = Math.min(150, WW * 0.32);
+  return x < pw + 16 && y > WH - 78;
+}
+function jump(){
+  if(state !== S.run || !stego.onGround) return;
+  stego.vy = -560; stego.onGround = false; stego.duck = false;
+  sfx.jump();
+}
+const stage = document.getElementById("stage");
+stage.addEventListener("pointerdown", e => {
+  if(state !== S.run) return;
+  if(inDuckPad(e)){
+    ducking = true; duckPointer = e.pointerId; stego.duck = true;
+  } else {
+    holding = true; jump();
+  }
+  e.preventDefault();
+}, { passive: false });
+stage.addEventListener("pointerup", e => {
+  if(e.pointerId === duckPointer){ ducking = false; duckPointer = null; stego.duck = false; }
+  holding = false;
+});
+stage.addEventListener("pointercancel", () => { holding = false; ducking = false; duckPointer = null; if(stego) stego.duck = false; });
+window.addEventListener("keydown", e => {
+  if(e.code === "Space" || e.code === "ArrowUp"){ holding = true; jump(); e.preventDefault(); }
+  if(e.code === "ArrowDown"){ ducking = true; if(stego) stego.duck = true; }
+});
+window.addEventListener("keyup", e => {
+  if(e.code === "Space" || e.code === "ArrowUp") holding = false;
+  if(e.code === "ArrowDown"){ ducking = false; if(stego) stego.duck = false; }
+});
+
+document.getElementById("go").addEventListener("click", start);
+document.getElementById("again").addEventListener("click", start);
+document.getElementById("sound").addEventListener("click", e => {
+  soundOn = !soundOn;
+  e.currentTarget.textContent = "Sound: " + (soundOn ? "on" : "off");
+  if(soundOn) sfx.pick();
+});
+document.addEventListener("visibilitychange", () => { if(!document.hidden) last = 0; });
+
+resize();
+reset();
+raf = requestAnimationFrame(frame);
+</script>
+</body>
+</html>
