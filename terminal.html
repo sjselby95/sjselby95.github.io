@@ -183,6 +183,7 @@
     projects: 'projects.html',
     labs: 'labs.html',
     software: 'software.html', bios: 'software.html',
+    games: 'games/',
     resume: 'Resume.pdf',
   };
 
@@ -199,7 +200,7 @@
       print('  status      skynet core status');
       print('  date        system + judgment day clock');
       print('  ls          list site sections');
-      print('  <section>   open a section (about, certs, projects, labs, software, resume)');
+      print('  <section>   open a section (about, certs, projects, labs, software, games, resume)');
       print('  clear       wipe the screen');
       print('  home        return to the motherboard');
       return;
@@ -224,7 +225,7 @@
       return;
     }
     if (arg === 'ls') {
-      print('about   certifications   projects   labs   software   resume', 'bright');
+      print('about   certifications   projects   labs   software   games   resume', 'bright');
       return;
     }
     if (arg === 'clear') { history.innerHTML = ''; return; }

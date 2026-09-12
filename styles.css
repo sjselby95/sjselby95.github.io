@@ -116,12 +116,6 @@ footer {
   box-shadow: 0 0 8px rgba(63, 227, 154, .35);
 }
 .mobile-nav a .arrow { color: var(--green-bright); }
-.mobile-nav a.reserved {
-  border-style: dashed;
-  border-color: #2a2a2a;
-  color: var(--text-mute);
-  pointer-events: none;
-}
 
 /* Lightbox */
 #lightbox {
