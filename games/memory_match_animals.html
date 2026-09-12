@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Animal Memory Match</title>
+  <style>
+    :root {
+      --bg: #f0f7ff;
+      --card-back: #4a90e2;
+      --card-front: #ffffff;
+      --text: #1a2b4c;
+      --accent: #ffb347;
+      --success: #66bb6a;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    
+    body {
+      margin: 0; padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+    }
+
+    h1 { margin: 8px 0 4px; font-size: clamp(1.5rem, 5vw, 2rem); text-align: center; }
+    .stats { display: flex; gap: 16px; margin-bottom: 12px; font-weight: bold; font-size: 1.1rem; }
+    
+    .grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(8px, 3vw, 12px);
+      width: min(90vw, 500px); aspect-ratio: 1 / 1; margin-bottom: 16px;
+    }
+
+    .card {
+      background: var(--card-back); border-radius: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: clamp(2rem, 8vw, 3.5rem);
+      transition: transform 0.3s ease, background-color 0.3s ease; position: relative;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1); touch-action: manipulation;
+    }
+
+    .card.flipped { background: var(--card-front); transform: rotateY(180deg); pointer-events: none; }
+    .card.matched { background: #e8f5e9; animation: pop 0.4s ease; }
+    
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+    .card-content { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center; backface-visibility: hidden; }
+    .flipped .card-content { display: block; transform: rotateY(180deg); }
+
+    button.restart {
+      background: var(--accent); border: none; padding: 12px 24px; font-size: 1.1rem;
+      border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+
+    .win-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95);
+      display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+    }
+    .win-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .stars { font-size: 2rem; margin: 8px 0; letter-spacing: 4px; }
+    
+    /* Landscape optimization */
+    @media (orientation: landscape) and (max-height: 500px) {
+      body { padding: 8px; flex-direction: row; gap: 16px; align-items: center; justify-content: center; }
+      .grid { width: min(70vh, 400px); aspect-ratio: 1/1; margin: 0; }
+      h1, .stats, button.restart { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🐾 Animal Match!</h1>
+  <div class="stats">
+    <span>Moves: <span id="moves">0</span></span>
+    <span>⭐ <span id="stars">0</span>/8</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <button class="restart" onclick="initGame()">🔄 New Game</button>
+
+  <div class="win-overlay" id="winOverlay">
+    <h1 style="font-size: 2.5rem;">🎉 You Did It!</h1>
+    <div class="stars" id="finalStars"></div>
+    <p style="margin: 8px 0;">Moves: <span id="finalMoves"></span></p>
+    <button class="restart" onclick="initGame()">Play Again</button>
+  </div>
+
+  <script>
+    const animals = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼'];
+    let cards = [], flippedCards = [], matchedPairs = 0, moves = 0;
+    let isLocked = false;
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function initGame() {
+      document.getElementById('winOverlay').classList.remove('show');
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      cards = shuffle([...animals, ...animals]);
+      flippedCards = []; matchedPairs = 0; moves = 0; isLocked = false;
+      updateStats();
+
+      cards.forEach((emoji, i) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.index = i;
+        card.innerHTML = `<span class="card-content">${emoji}</span>`;
+        card.addEventListener('click', () => flipCard(card));
+        grid.appendChild(card);
+      });
+    }
+
+    function flipCard(card) {
+      if (isLocked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+      
+      card.classList.add('flipped');
+      flippedCards.push(card);
+
+      if (flippedCards.length === 2) {
+        moves++; updateStats();
+        isLocked = true;
+        const [a, b] = flippedCards;
+        
+        if (a.dataset.index === b.dataset.index) {
+          setTimeout(() => {
+            a.classList.add('matched'); b.classList.add('matched');
+            matchedPairs++; updateStats();
+            flippedCards = []; isLocked = false;
+            if (matchedPairs === animals.length) showWin();
+          }, 400);
+        } else {
+          setTimeout(() => {
+            a.classList.remove('flipped'); b.classList.remove('flipped');
+            flippedCards = []; isLocked = false;
+          }, 800);
+        }
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('moves').textContent = moves;
+      const stars = Math.max(1, Math.min(3, Math.floor((16 - moves) / 4)));
+      document.getElementById('stars').textContent = stars;
+    }
+
+    function showWin() {
+      const overlay = document.getElementById('winOverlay');
+      document.getElementById('finalMoves').textContent = moves;
+      const starCount = Math.max(1, Math.min(3, Math.floor((16 - moves) / 4)));
+      document.getElementById('finalStars').textContent = '⭐'.repeat(starCount);
+      overlay.classList.add('show');
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

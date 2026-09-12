@@ -1,0 +1,13 @@
+# Normalize line endings for text files: store as LF in the repo and
+# check them out as LF too (prevents the Windows LF/CRLF conversion warning).
+* text=auto eol=lf
+
+# Binary files — never apply line-ending conversion or text diffing.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.mp3  binary
