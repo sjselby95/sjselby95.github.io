@@ -117,33 +117,33 @@ function drawQueen(t){
   g.rotate(sway);
 
   /* cape */
-  g.fillStyle = d.cape; g.globalAlpha = 0.75;
+  g.fillStyle = d.cape; g.globalAlpha = 0.55;
   g.beginPath();
-  g.moveTo(-s * 0.14, -s * 0.72);
-  g.quadraticCurveTo(-s * 0.55, -s * 0.2, -s * 0.38, s * 0.02);
-  g.lineTo(s * 0.38, s * 0.02);
-  g.quadraticCurveTo(s * 0.55, -s * 0.2, s * 0.14, -s * 0.72);
+  g.moveTo(-s * 0.12, -s * 0.70);
+  g.bezierCurveTo(-s * 0.10, -s * 0.40, -s * 0.20, -s * 0.10, -s * 0.30, s * 0.06);
+  g.lineTo(s * 0.30, s * 0.06);
+  g.bezierCurveTo(s * 0.20, -s * 0.10, s * 0.10, -s * 0.40, s * 0.12, -s * 0.70);
   g.closePath(); g.fill();
   g.globalAlpha = 1;
 
   /* gown */
   g.fillStyle = d.body;
   g.beginPath();
-  g.moveTo(-s * 0.12, -s * 0.66);
-  g.quadraticCurveTo(-s * 0.15, -s * 0.3, -s * 0.30, 0);
-  g.quadraticCurveTo(0, s * 0.09, s * 0.30, 0);
-  g.quadraticCurveTo(s * 0.15, -s * 0.3, s * 0.12, -s * 0.66);
+  g.moveTo(-s * 0.11, -s * 0.62);
+  g.bezierCurveTo(-s * 0.09, -s * 0.40, -s * 0.13, -s * 0.14, -s * 0.24, s * 0.02);
+  g.quadraticCurveTo(0, s * 0.10, s * 0.24, s * 0.02);
+  g.bezierCurveTo(s * 0.13, -s * 0.14, s * 0.09, -s * 0.40, s * 0.11, -s * 0.62);
   g.closePath(); g.fill();
   g.fillStyle = d.trim;
   g.beginPath();
-  g.moveTo(-s * 0.30, 0); g.quadraticCurveTo(0, s * 0.09, s * 0.30, 0);
-  g.quadraticCurveTo(0, s * 0.02, -s * 0.30, 0);
+  g.moveTo(-s * 0.24, s * 0.02); g.quadraticCurveTo(0, s * 0.10, s * 0.24, s * 0.02);
+  g.quadraticCurveTo(0, s * 0.04, -s * 0.24, s * 0.02);
   g.fill();
 
   /* arms */
-  g.strokeStyle = d.body; g.lineWidth = s * 0.06; g.lineCap = "round";
-  g.beginPath(); g.moveTo(-s * 0.11, -s * 0.6); g.quadraticCurveTo(-s * 0.24, -s * 0.46, -s * 0.22, -s * 0.3); g.stroke();
-  g.beginPath(); g.moveTo(s * 0.11, -s * 0.6); g.quadraticCurveTo(s * 0.24, -s * 0.46, s * 0.22, -s * 0.3); g.stroke();
+  g.strokeStyle = d.body; g.lineWidth = s * 0.055; g.lineCap = "round";
+  g.beginPath(); g.moveTo(-s * 0.10, -s * 0.58); g.quadraticCurveTo(-s * 0.18, -s * 0.44, -s * 0.15, -s * 0.24); g.stroke();
+  g.beginPath(); g.moveTo(s * 0.10, -s * 0.58); g.quadraticCurveTo(s * 0.18, -s * 0.44, s * 0.15, -s * 0.24); g.stroke();
 
   /* head */
   g.fillStyle = "#f7d9c4";
@@ -151,8 +151,8 @@ function drawQueen(t){
   /* braid, swinging */
   g.strokeStyle = "#f0e2b8"; g.lineWidth = s * 0.09;
   g.beginPath();
-  g.moveTo(s * 0.1, -s * 0.8);
-  g.quadraticCurveTo(s * 0.3 + hair * s * 0.1, -s * 0.6, s * 0.2 + hair * s * 0.14, -s * 0.34);
+  g.moveTo(s * 0.08, -s * 0.82);
+  g.quadraticCurveTo(s * 0.20 + hair * s * 0.06, -s * 0.60, s * 0.14 + hair * s * 0.08, -s * 0.32);
   g.stroke();
   g.fillStyle = "#f0e2b8";
   g.beginPath(); g.arc(0, -s * 0.92, s * 0.18, Math.PI, 0); g.fill();
