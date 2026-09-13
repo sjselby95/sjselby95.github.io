@@ -1,16 +1,25 @@
 # /games — integration notes
 
-Three self-contained browser games. Drop-in static files: **no build step, no framework, no bundler, no npm.**
+Seven self-contained browser games. Drop-in static files: **no build step, no framework, no bundler, no npm.**
 
 ```
 games/
-  index.html              hub page listing the three games
+  index.html              hub page listing everything
   bone-quarry/
     index.html            the game
     voice.mp3             ~1 MB narration track, loaded by relative path
-  plate-run/index.html
-  thagomizer/index.html
+  plate-run/index.html      \
+  thagomizer/index.html      |  for the six-year-old
+  tide-pool/index.html      \
+  monster-music/index.html   |  toys for the three-year-old
+  snow-palace/index.html     |
+  finger-paint/index.html   /
 ```
+
+The four toys are aimed at a three-year-old, which drove every design decision in them: no text
+to read, no score, no timer, no fail state, no menus, nothing smaller than a thumb, and every
+one of them survives a palm flat on the glass (they all handle multiple simultaneous pointers).
+Do not add difficulty, scoring, or a tutorial to these — the absence is the feature.
 
 ## What Claude Code needs to do
 
@@ -27,6 +36,17 @@ games/
    a root-absolute path, so the whole folder can be moved or renamed as a unit.
 
 ## Things worth knowing before changing anything
+
+- **The toys are full-viewport, the games are not.** The four toys take over the whole screen with
+  a fixed canvas and a small back arrow in the corner; they set `touch-action:none` and
+  `overflow:hidden` on `body` on purpose. Do not wrap them in the site chrome — a header bar
+  reintroduces page scrolling and breaks dragging on a phone.
+- **Tide Pool speaks eight animal names** from a small mp3 sprite inlined as base64 in its HTML,
+  with the same offset-map arrangement Bone Quarry uses. It is only ~50 KB so it stays inline;
+  no separate file to lose.
+- **Every toy waits for a first tap before making any sound.** That opening splash screen is not
+  decoration — mobile browsers will not start audio without a gesture, and it is also what stops
+  a toy from blaring the moment a page loads.
 
 - **`voice.mp3` is required.** It is one audio sprite holding 169 clips — every dinosaur name, every
   sentence, and every individual word. `bone-quarry/index.html` contains a `VOX` map of

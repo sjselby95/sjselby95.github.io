@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Finger Paint</title>
+<meta name="description" content="Drag a finger, light follows it and sings. It cleans itself up.">
+<meta name="theme-color" content="#05060a">
+<style>
+  html{color-scheme:dark;height:100%}
+  body{
+    margin:0;height:100%;background:#05060a;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  canvas{display:block;width:100%;height:100%;position:fixed;inset:0}
+  .home{
+    position:fixed;left:10px;top:calc(10px + env(safe-area-inset-top));z-index:3;
+    width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.45);
+    color:rgba(255,255,255,.45);text-decoration:none;font-size:19px;line-height:34px;text-align:center;
+  }
+  .gate{
+    position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;
+    background:radial-gradient(circle at 50% 45%, #111827 0%, #05060a 72%);
+    color:#fff;cursor:pointer;
+  }
+  .gate.gone{display:none}
+  .gate h1{font-size:clamp(34px,11vw,58px);margin:0;font-weight:800;letter-spacing:-.02em}
+  .gate p{margin:0;color:#8ea3c4;font-size:17px}
+  .gate svg{width:min(52vw,220px);height:auto}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<a class="home" href="../" aria-label="Back">&#8592;</a>
+
+<div class="gate" id="gate">
+  <svg viewBox="0 0 200 120" aria-hidden="true">
+    <path d="M20 96 C60 20 90 110 130 44 C150 12 172 26 184 40" fill="none"
+          stroke="url(#sw)" stroke-width="13" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="sw" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#ff4d9d"/><stop offset=".5" stop-color="#ffd23d"/>
+        <stop offset="1" stop-color="#4de0c0"/>
+      </linearGradient>
+    </defs>
+    <circle cx="184" cy="40" r="11" fill="#fff"/>
+  </svg>
+  <h1>Finger Paint</h1>
+  <p>Drag your finger anywhere</p>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- sound: one gentle chime per stroke segment ---------------- */
+let AC = null, bus = null, lastNote = 0;
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];   /* pentatonic — nothing can sound wrong */
+function boot(){
+  if(AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  bus = AC.createGain(); bus.gain.value = 0.5; bus.connect(AC.destination);
+}
+function chime(y){
+  if(!AC) return;
+  const now = AC.currentTime;
+  if(now - lastNote < 0.085) return;       /* keep it musical, not a buzz */
+  lastNote = now;
+  const step = SCALE[Math.max(0, Math.min(SCALE.length - 1,
+    Math.floor((1 - y / window.innerHeight) * SCALE.length)))];
+  const f = 261.63 * Math.pow(2, step / 12);
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = "sine"; o.frequency.value = f;
+  const o2 = AC.createOscillator();
+  o2.type = "sine"; o2.frequency.value = f * 2.01;
+  const g2 = AC.createGain(); g2.gain.value = 0.28;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.22, now + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(bus);
+  o.start(now); o2.start(now);
+  o.stop(now + 1.0); o2.stop(now + 1.0);
+}
+
+/* ---------------- canvas ---------------- */
+const cv = document.getElementById("cv"), g = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  const keep = document.createElement("canvas");
+  keep.width = cv.width; keep.height = cv.height;
+  if(cv.width > 4) keep.getContext("2d").drawImage(cv, 0, 0);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  if(keep.width > 4) g.drawImage(keep, 0, 0, cv.width, cv.height);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener("resize", resize);
+
+const strokes = new Map();     /* pointerId -> last point */
+let hue = Math.random() * 360;
+let stars = [];
+
+function seedStars(){
+  stars = [];
+  for(let i = 0; i < 60; i++){
+    stars.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.4 + 0.3, p: Math.random() * 6 });
+  }
+}
+seedStars();
+
+function paintSegment(a, b, speed){
+  const w = Math.max(6, Math.min(46, 46 - speed * 1.1));
+  hue = (hue + 2.4) % 360;
+  g.lineCap = "round"; g.lineJoin = "round";
+  /* glow underneath, bright core on top */
+  g.strokeStyle = "hsla(" + hue + ",100%,55%,0.22)";
+  g.lineWidth = w * 2.4;
+  g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+  g.strokeStyle = "hsla(" + hue + ",100%,68%,0.95)";
+  g.lineWidth = w;
+  g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+  g.strokeStyle = "hsla(" + hue + ",100%,90%,1)";
+  g.lineWidth = Math.max(3, w * 0.42);
+  g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+}
+
+function frame(ms){
+  const t = ms / 1000;
+  /* everything fades on its own, so the page never fills up and never needs a button */
+  g.globalCompositeOperation = "destination-out";
+  g.fillStyle = "rgba(0,0,0,0.0016)";
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = "source-over";
+
+  /* a few slow stars so a still screen is not a dead screen */
+  stars.forEach(s => {
+    const a = 0.25 + Math.sin(t * 0.8 + s.p) * 0.2;
+    g.fillStyle = "rgba(190,214,255," + a.toFixed(3) + ")";
+    g.beginPath(); g.arc(s.x * W, s.y * H, s.r, 0, 7); g.fill();
+  });
+
+  requestAnimationFrame(frame);
+}
+
+function pt(e){ return { x: e.clientX, y: e.clientY }; }
+
+const gate = document.getElementById("gate");
+gate.addEventListener("pointerdown", e => { boot(); gate.classList.add("gone"); e.preventDefault(); });
+
+window.addEventListener("pointerdown", e => {
+  if(!gate.classList.contains("gone")) return;
+  if(e.target.classList && e.target.classList.contains("home")) return;
+  const p = pt(e);
+  strokes.set(e.pointerId, p);
+  paintSegment(p, { x: p.x + 0.1, y: p.y }, 0);
+  chime(p.y);
+}, { passive: true });
+
+window.addEventListener("pointermove", e => {
+  const last = strokes.get(e.pointerId);
+  if(!last) return;
+  const p = pt(e);
+  const d = Math.hypot(p.x - last.x, p.y - last.y);
+  if(d < 1.5) return;
+  paintSegment(last, p, d);
+  if(d > 14) chime(p.y);
+  strokes.set(e.pointerId, p);
+}, { passive: true });
+
+function end(e){ strokes.delete(e.pointerId); }
+window.addEventListener("pointerup", end, { passive: true });
+window.addEventListener("pointercancel", end, { passive: true });
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
