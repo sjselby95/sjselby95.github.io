@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Drum Kit</title>
+<meta name="description" content="Tap the drums and it sounds like a real kit — kick, snare, toms, hi-hat, and cymbals. No rules, just noise.">
+<meta name="theme-color" content="#0a0812">
+<style>
+  html{color-scheme:dark;height:100%}
+  body{
+    margin:0;height:100%;background:#0a0812;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  canvas{display:block;width:100%;height:100%;position:fixed;inset:0}
+  .home{
+    position:fixed;left:10px;top:calc(10px + env(safe-area-inset-top));z-index:3;
+    width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.4);
+    color:rgba(255,255,255,.55);text-decoration:none;font-size:19px;line-height:34px;text-align:center;
+  }
+  .gate{
+    position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;
+    background:radial-gradient(circle at 50% 42%, #241247 0%, #0a0812 72%);
+    color:#fff;cursor:pointer;
+  }
+  .gate.gone{display:none}
+  .gate h1{font-size:clamp(32px,10vw,56px);margin:0;font-weight:800;letter-spacing:-.02em}
+  .gate p{margin:0;color:#b89cf0;font-size:17px}
+  .gate svg{width:min(46vw,190px);height:auto}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<a class="home" href="../toys.html" aria-label="Back to toys">&#8592;</a>
+
+<div class="gate" id="gate">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <line x1="60" y1="18" x2="28" y2="54" stroke="#e6c46b" stroke-width="5" stroke-linecap="round"/>
+    <line x1="60" y1="18" x2="92" y2="54" stroke="#e6c46b" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="60" cy="96" rx="36" ry="12" fill="#6f47c9"/>
+    <rect x="24" y="66" width="72" height="30" fill="#8a5cf0"/>
+    <ellipse cx="60" cy="66" rx="36" ry="12" fill="#e9edf3"/>
+    <ellipse cx="60" cy="66" rx="22" ry="7" fill="#c9d0da"/>
+  </svg>
+  <h1>Drum Kit</h1>
+  <p>Tap the drums &mdash; use both hands!</p>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- sound (synthesized, no files) ---------------- */
+let AC = null, master = null, noiseBuf = null;
+function boot(){
+  if(AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain(); master.gain.value = 0.8; master.connect(AC.destination);
+  const n = Math.floor(AC.sampleRate * 1);
+  noiseBuf = AC.createBuffer(1, n, AC.sampleRate);
+  const dat = noiseBuf.getChannelData(0);
+  for(let i = 0; i < n; i++) dat[i] = Math.random() * 2 - 1;
+}
+function noiseSrc(){ const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s; }
+
+function playKick(){
+  const t = AC.currentTime, o = AC.createOscillator(), gn = AC.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(165, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
+  gn.gain.setValueAtTime(0.9, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + 0.4);
+  const c = AC.createOscillator(), cg = AC.createGain();
+  c.type = "triangle"; c.frequency.value = 1100;
+  cg.gain.setValueAtTime(0.5, t); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  c.connect(cg); cg.connect(master); c.start(t); c.stop(t + 0.05);
+}
+function playSnare(){
+  const t = AC.currentTime;
+  const s = noiseSrc(), f = AC.createBiquadFilter(), gn = AC.createGain();
+  f.type = "highpass"; f.frequency.value = 1300;
+  gn.gain.setValueAtTime(0.7, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+  s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t + 0.25);
+  const o = AC.createOscillator(), og = AC.createGain();
+  o.type = "triangle"; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.1);
+  og.gain.setValueAtTime(0.4, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.15);
+}
+function playHat(open){
+  const t = AC.currentTime, dur = open ? 0.4 : 0.055;
+  const s = noiseSrc(), f = AC.createBiquadFilter(), gn = AC.createGain();
+  f.type = "highpass"; f.frequency.value = 7500;
+  gn.gain.setValueAtTime(0.45, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t + dur + 0.02);
+}
+function playTom(freq){
+  const t = AC.currentTime, o = AC.createOscillator(), gn = AC.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.3);
+  gn.gain.setValueAtTime(0.85, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + 0.45);
+}
+function playCymbal(dur){
+  const t = AC.currentTime;
+  const s = noiseSrc(), f = AC.createBiquadFilter(), gn = AC.createGain();
+  f.type = "highpass"; f.frequency.value = 5000;
+  gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.32, t + 0.005);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t + dur + 0.05);
+  const o = AC.createOscillator(), og = AC.createGain();
+  o.type = "square"; o.frequency.value = 3200;
+  og.gain.setValueAtTime(0.05, t); og.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.6);
+  o.connect(og); og.connect(master); o.start(t); o.stop(t + dur);
+}
+function playRide(){
+  const t = AC.currentTime;
+  const o = AC.createOscillator(), o2 = AC.createOscillator(), gn = AC.createGain(), g2 = AC.createGain();
+  o.type = "sine"; o.frequency.value = 560; o2.type = "sine"; o2.frequency.value = 560 * 2.4; g2.gain.value = 0.3;
+  gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.4, t + 0.004);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+  o.connect(gn); o2.connect(g2); g2.connect(gn); gn.connect(master);
+  o.start(t); o2.start(t); o.stop(t + 0.75); o2.stop(t + 0.75);
+  const s = noiseSrc(), f = AC.createBiquadFilter(), ng = AC.createGain();
+  f.type = "highpass"; f.frequency.value = 6500;
+  ng.gain.setValueAtTime(0.11, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.55);
+}
+
+/* ---------------- canvas + layout ---------------- */
+const cv = document.getElementById("cv"), g = cv.getContext("2d");
+const DW = 1000, DH = 720, FLOOR = 705;
+let W = 0, H = 0, DPR = 1, SC = 1, OX = 0, OY = 0, drums = [];
+
+function buildKit(){
+  drums = [
+    { id:"crash",    cymbal:true,  x:300, y:210, r:120, ph:0.0, sound:()=>playCymbal(1.3) },
+    { id:"ride",     cymbal:true,  x:740, y:235, r:130, ph:1.3, sound:playRide },
+    { id:"hihat",    cymbal:true,  x:165, y:415, r:95,  ph:2.1, sound:()=>playHat(false) },
+    { id:"tom1",     shell:"#c8321f", x:405, y:360, r:85,  sound:()=>playTom(240) },
+    { id:"tom2",     shell:"#c8321f", x:600, y:360, r:95,  sound:()=>playTom(175) },
+    { id:"kick",     shell:"#a52a1a", big:true, x:500, y:560, r:140, sound:playKick },
+    { id:"floortom", shell:"#c8321f", x:775, y:540, r:115, sound:()=>playTom(110) },
+    { id:"snare",    shell:"#d84b2a", x:300, y:525, r:90,  sound:playSnare }
+  ];
+  drums.forEach(d => d.hit = 0);
+}
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  SC = Math.min(W / DW, H / DH);
+  OX = (W - DW * SC) / 2; OY = (H - DH * SC) / 2;
+}
+window.addEventListener("resize", resize);
+
+function drumById(id){ return drums.find(d => d.id === id); }
+
+/* ---------------- drawing ---------------- */
+function drawDrum(d){
+  const b = 1 + d.hit * 0.05, r = d.r * b;
+  g.beginPath(); g.arc(d.x, d.y, r, 0, 7); g.fillStyle = d.shell; g.fill();
+  g.beginPath(); g.arc(d.x, d.y, r * 0.93, 0, 7); g.lineWidth = r * 0.10; g.strokeStyle = "#e8ebef"; g.stroke();
+  g.fillStyle = "#cfd3d9";
+  for(let i = 0; i < 8; i++){ const a = i / 8 * 6.2832 + 0.4;
+    g.beginPath(); g.arc(d.x + Math.cos(a) * r * 0.99, d.y + Math.sin(a) * r * 0.99, r * 0.05, 0, 7); g.fill(); }
+  const hr = r * 0.80;
+  const grad = g.createRadialGradient(d.x - hr * 0.3, d.y - hr * 0.3, hr * 0.1, d.x, d.y, hr);
+  grad.addColorStop(0, "#ffffff"); grad.addColorStop(1, "#d7dbe2");
+  g.beginPath(); g.arc(d.x, d.y, hr, 0, 7); g.fillStyle = grad; g.fill();
+  if(d.big){
+    g.beginPath(); g.arc(d.x, d.y, hr * 0.42, 0, 7); g.strokeStyle = d.shell; g.lineWidth = r * 0.03; g.stroke();
+    g.fillStyle = d.shell; g.font = "bold " + (hr * 0.4) + "px system-ui";
+    g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("★", d.x, d.y + hr * 0.02);
+  }
+  if(d.hit > 0.01){ g.beginPath(); g.arc(d.x, d.y, hr, 0, 7); g.fillStyle = "rgba(255,255,255," + (d.hit * 0.45) + ")"; g.fill(); }
+  if(d.hit > 0.02){
+    const rr = hr + (1 - d.hit) * d.r * 0.7;
+    g.beginPath(); g.arc(d.x, d.y, rr, 0, 7);
+    g.strokeStyle = "rgba(255,255,255," + (d.hit * 0.5) + ")"; g.lineWidth = Math.max(2, d.r * 0.03); g.stroke();
+  }
+}
+function drawCymbal(d, ms){
+  g.strokeStyle = "#7f858e"; g.lineWidth = Math.max(3, d.r * 0.05);
+  g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x, FLOOR); g.stroke();
+  const wob = Math.sin(ms * 0.02 + d.ph) * d.hit * 0.16;
+  g.save(); g.translate(d.x, d.y); g.rotate(wob);
+  g.beginPath(); g.ellipse(0, 0, d.r, d.r * 0.30, 0, 0, 7);
+  const cg = g.createLinearGradient(-d.r, 0, d.r, 0);
+  cg.addColorStop(0, "#9c7213"); cg.addColorStop(0.5, "#f2d777"); cg.addColorStop(1, "#9c7213");
+  g.fillStyle = cg; g.fill();
+  g.strokeStyle = "rgba(90,65,10,0.45)"; g.lineWidth = 1;
+  for(let k = 1; k <= 3; k++){ g.beginPath(); g.ellipse(0, 0, d.r * k / 3.4, d.r * 0.30 * k / 3.4, 0, 0, 7); g.stroke(); }
+  g.beginPath(); g.ellipse(0, 0, d.r * 0.16, d.r * 0.16, 0, 0, 7); g.fillStyle = "#e9c552"; g.fill();
+  if(d.hit > 0.01){ g.beginPath(); g.ellipse(0, 0, d.r, d.r * 0.30, 0, 0, 7); g.fillStyle = "rgba(255,255,255," + (d.hit * 0.4) + ")"; g.fill(); }
+  g.restore();
+}
+function frame(ms){
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = g.createRadialGradient(W / 2, H * 0.46, 40, W / 2, H * 0.5, Math.max(W, H) * 0.72);
+  bg.addColorStop(0, "#1c1330"); bg.addColorStop(1, "#05060a");
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.save(); g.translate(OX, OY); g.scale(SC, SC);
+  for(let i = 0; i < drums.length; i++){
+    const d = drums[i];
+    d.cymbal ? drawCymbal(d, ms) : drawDrum(d);
+    d.hit = d.hit > 0.0008 ? d.hit * 0.86 : 0;
+  }
+  g.restore();
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- input ---------------- */
+let started = false;
+function trigger(d){ if(!d) return; d.hit = 1; d.sound(); }
+function hitAt(px, py){
+  const dx = (px - OX) / SC, dy = (py - OY) / SC;
+  for(let i = drums.length - 1; i >= 0; i--){
+    const d = drums[i];
+    if((dx - d.x) * (dx - d.x) + (dy - d.y) * (dy - d.y) < d.r * d.r) return d;
+  }
+  return null;
+}
+
+const gate = document.getElementById("gate");
+gate.addEventListener("pointerdown", e => { boot(); gate.classList.add("gone"); started = true; e.preventDefault(); });
+
+const down = new Set(), lastDrum = new Map();
+window.addEventListener("pointerdown", e => {
+  if(!started) return;
+  if(e.target.classList && e.target.classList.contains("home")) return;
+  down.add(e.pointerId);
+  const d = hitAt(e.clientX, e.clientY);
+  lastDrum.set(e.pointerId, d);
+  trigger(d);
+}, { passive:true });
+window.addEventListener("pointermove", e => {
+  if(!started || !down.has(e.pointerId)) return;
+  const d = hitAt(e.clientX, e.clientY);
+  if(d && d !== lastDrum.get(e.pointerId)) trigger(d);
+  lastDrum.set(e.pointerId, d);
+}, { passive:true });
+function endPtr(e){ down.delete(e.pointerId); lastDrum.delete(e.pointerId); }
+window.addEventListener("pointerup", endPtr, { passive:true });
+window.addEventListener("pointercancel", endPtr, { passive:true });
+
+/* keyboard, for older hands on a laptop */
+const KEYMAP = { " ":"kick", "f":"hihat", "j":"snare", "d":"tom1", "k":"tom2", "a":"floortom", "g":"crash", "h":"ride" };
+window.addEventListener("keydown", e => {
+  const id = KEYMAP[e.key.toLowerCase()];
+  if(!id) return;
+  e.preventDefault();
+  if(!started){ boot(); gate.classList.add("gone"); started = true; }
+  if(!e.repeat) trigger(drumById(id));
+});
+
+buildKit();
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
