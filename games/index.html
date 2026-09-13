@@ -146,6 +146,31 @@
   .meter { height: 5px; background: #101613; border: 1px solid var(--green-dim); border-radius: 4px; overflow: hidden; }
   .meter > span { display: block; height: 100%; background: linear-gradient(to right, var(--green), var(--green-bright)); }
 
+  /* Violet entry to the toys page — reachable only from here */
+  .toys-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #b89cf0;
+    background: rgba(154,92,246,0.08);
+    border: 1px solid #9a5cf6;
+    border-radius: 8px;
+    padding: 9px 16px;
+    transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .toys-btn:hover, .toys-btn:focus-visible {
+    background: rgba(154,92,246,0.16);
+    box-shadow: 0 0 12px rgba(184,156,240,.35);
+    transform: translateY(-1px);
+    outline: none;
+  }
+  .toys-btn .led { width: 8px; height: 8px; border-radius: 50%; background: #b89cf0; box-shadow: 0 0 7px rgba(184,156,240,.7); }
+
   /* Game library */
   .lib { background: #080d0a; padding: 14px 24px 24px; }
   .lib-cmd { font-size: 12px; letter-spacing: 0.5px; color: var(--text-soft); padding: 6px 0 16px; }
@@ -224,6 +249,7 @@
     .header { flex-direction: column; gap: 4px; }
     .header-right { text-align: left; }
     .gpu { gap: 12px 20px; }
+    .toys-btn { margin-left: 0; width: 100%; justify-content: center; }
     .nav-footer { flex-wrap: wrap; gap: 8px 14px; justify-content: center; }
   }
 
@@ -278,6 +304,7 @@
       <div class="k">POWER</div>
       <div class="v">170W TGP</div>
     </div>
+    <a class="toys-btn" href="toys.html" aria-label="Toys"><span class="led"></span> Toys</a>
   </div>
 
   <!-- Game library -->

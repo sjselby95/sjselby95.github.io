@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Toys — cyberskillscorner</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#000000" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Russo+One&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%239a5cf6%22 stroke-width=%221%22/></svg>">
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0a0d0f;
+    --panel-2: #0c0f12;
+    --metal: #15181b;
+    --border: #2c3033;
+    --violet: #9a5cf6;
+    --violet-bright: #b89cf0;
+    --violet-dim: #2a2140;
+    --text: #f2faf6;
+    --text-soft: #cfe9dd;
+    --text-mute: #6a7a72;
+    --text-dim: #3a4a42;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 1040px;
+    border-radius: 12px;
+    border: 1px solid #1f1f1f;
+    overflow: hidden;
+    background: var(--panel);
+  }
+
+  /* Browser chrome */
+  .chrome {
+    background: #111417;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #2a2e32; }
+  .url-bar {
+    flex: 1;
+    background: #1a1f22;
+    border-radius: 9px;
+    padding: 4px 14px;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  /* ARGB diffuser (purple-leaning) */
+  .diffuser {
+    height: 4px;
+    background: linear-gradient(to right,
+      #6b4bd8, #9a5cf6, #e15bff, #37b6ff,
+      #6b4bd8, #9a5cf6, #e15bff, #37b6ff,
+      #6b4bd8
+    );
+    background-size: 200% 100%;
+    animation: rgb-flow 8s linear infinite;
+  }
+  @keyframes rgb-flow {
+    0%   { background-position: 0% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  /* Header */
+  .header {
+    background: #0c0f12;
+    padding: 18px 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .header-left .title {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: var(--text);
+    font-family: "Russo One", var(--mono);
+  }
+  .header-left .sub {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .header-right {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--violet-bright);
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-right .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--violet-bright);
+    box-shadow: 0 0 7px rgba(184,156,240,.7);
+  }
+
+  /* Toy library */
+  .lib { background: #0a0810; padding: 18px 24px 24px; }
+  .lib-cmd { font-size: 12px; letter-spacing: 0.5px; color: var(--text-soft); padding: 6px 0 16px; }
+  .lib-cmd .prompt { color: var(--violet-bright); }
+
+  .toy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .toy {
+    background: var(--metal);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .toy:hover, .toy:focus-visible {
+    border-color: var(--violet-bright);
+    box-shadow: 0 0 12px rgba(184,156,240,.22);
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .toy .art {
+    height: 92px;
+    border-radius: 7px;
+    background: #08060c;
+    border: 1px solid var(--violet-dim);
+    overflow: hidden;
+  }
+  .toy .art svg { width: 100%; height: 100%; display: block; }
+  .toy .tag {
+    align-self: flex-start;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--violet-bright);
+    border: 1px solid var(--violet-dim);
+    border-radius: 99px;
+    padding: 2px 9px;
+  }
+  .toy .t-name { font-size: 16px; color: var(--text); }
+  .toy:hover .t-name, .toy:focus-visible .t-name { color: var(--violet-bright); }
+  .toy .t-desc { font-size: 11px; line-height: 1.6; color: var(--text-mute); }
+  .toy .play {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--violet-bright);
+  }
+  .toy .play::before { content: "▶"; font-size: 9px; }
+
+  /* Back bar (kept intentionally minimal — this page is only reached from games) */
+  .back {
+    background: var(--panel);
+    padding: 12px 24px;
+    display: flex;
+    gap: 24px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-mute);
+  }
+  .back a { color: var(--text-mute); text-decoration: none; }
+  .back a:hover { color: var(--violet-bright); }
+
+  @media (max-width: 560px) {
+    .header { flex-direction: column; gap: 6px; }
+    .header-right { text-align: left; }
+    .back { flex-wrap: wrap; gap: 12px 20px; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="chrome">
+    <div class="dots">
+      <a class="dot" href="index.html" aria-label="Back to games" style="background:#ff5f57;"></a>
+      <a class="dot" href="index.html" aria-label="Back to games" style="background:#febc2e;"></a>
+      <a class="dot" href="index.html" aria-label="Back to games" style="background:#28c840;"></a>
+    </div>
+    <div class="url-bar">cyberskillscorner.xyz / games / toys</div>
+  </div>
+
+  <div class="diffuser"></div>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="title">TOYS</div>
+      <div class="sub">argb // playground</div>
+    </div>
+    <div class="header-right"><span class="led"></span> for little hands</div>
+  </div>
+
+  <!-- Toy library -->
+  <div class="lib">
+    <div class="lib-cmd"><span class="prompt">argb:~$</span> ls ./toys</div>
+
+    <div class="toy-grid">
+
+      <!-- NEWEST FIRST: add each new toy as a new <a class="toy" href="toy-name/"> block directly below this line. -->
+
+      <!-- Tide Pool -->
+      <a class="toy" href="tide-pool/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#07485c"/>
+            <path d="M0 74h200v18H0z" fill="#3a3220"/>
+            <g fill="none" stroke="#9a5cf6" stroke-width="4" stroke-linecap="round" opacity=".5">
+              <path d="M30 74 q-6-18 2-30 M44 74 q6-16 -1-26 M168 74 q6-18 -2-28"/>
+            </g>
+            <ellipse cx="100" cy="40" rx="30" ry="17" fill="#dfe8e2"/>
+            <circle cx="130" cy="32" r="12" fill="#dfe8e2"/>
+            <circle cx="126" cy="29" r="2.6" fill="#07485c"/><circle cx="135" cy="29" r="2.6" fill="#07485c"/>
+            <ellipse cx="131" cy="36" rx="4" ry="3" fill="#b89cf0"/>
+            <g fill="none" stroke="#b89cf0" stroke-width="2" opacity=".8">
+              <circle cx="60" cy="28" r="4"/><circle cx="72" cy="16" r="3"/><circle cx="50" cy="14" r="2.5"/>
+            </g>
+          </svg>
+        </div>
+        <span class="tag">Ages 2+</span>
+        <div class="t-name">Tide Pool</div>
+        <div class="t-desc">Tap the water and an Alaska sea animal appears. Touch one and it says its own name out loud — otter, puffin, seal, octopus, jellyfish, sea lion, sea star, crab.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Monster Music -->
+      <a class="toy" href="monster-music/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <g>
+              <rect x="16" y="18" width="50" height="56" rx="10" fill="#6b4bd8"/>
+              <rect x="75" y="18" width="50" height="56" rx="10" fill="#9a5cf6"/>
+              <rect x="134" y="18" width="50" height="56" rx="10" fill="#b89cf0"/>
+            </g>
+            <g fill="#0b0f0d">
+              <circle cx="32" cy="40" r="5"/><circle cx="50" cy="40" r="5"/>
+              <path d="M30 56 q11 12 22 0 q-11 6 -22 0z"/>
+              <circle cx="100" cy="40" r="5"/>
+              <ellipse cx="100" cy="58" rx="7" ry="5"/>
+              <circle cx="150" cy="40" r="5"/><circle cx="168" cy="40" r="5"/>
+              <path d="M148 54 h22 l-11 12z"/>
+            </g>
+            <path d="M134 18 l-6 -12 14 8z M184 18 l6 -12 -14 8z" fill="#e15bff"/>
+          </svg>
+        </div>
+        <span class="tag">Loud</span>
+        <div class="t-name">Monster Music</div>
+        <div class="t-desc">Six monsters, six noises — power chords, drums, and a growl. They blink, they breathe, and they yell when you poke them. Headphones optional, patience required.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Snow Palace -->
+      <a class="toy" href="snow-palace/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0a1030"/>
+            <path d="M0 22 q50 -10 100 4 t100 -2" stroke="#9a5cf6" stroke-width="7" fill="none" opacity=".4"/>
+            <g fill="#1d3470">
+              <path d="M56 76V46l12-12 12 12v30z"/><path d="M92 76V34l14-14 14 14v42z"/><path d="M132 76V48l12-12 12 12v28z"/>
+            </g>
+            <path d="M0 76h200v16H0z" fill="#dfe8e2"/>
+            <g stroke="#dfe8e2" stroke-width="2.5" stroke-linecap="round">
+              <path d="M36 30v16M28 34l16 8M44 34l-16 8"/>
+              <path d="M170 44v12M164 47l12 6M176 47l-12 6"/>
+            </g>
+            <path d="M100 44 l-5 6 h10z" fill="#b89cf0"/>
+          </svg>
+        </div>
+        <span class="tag">Calm</span>
+        <div class="t-name">Snow Palace</div>
+        <div class="t-desc">Tap to make it snow, drag to draw frost, and it piles up on the ground. Tap the snow queen and her dress changes color. The northern lights run the whole time.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Finger Paint -->
+      <a class="toy" href="finger-paint/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <defs><linearGradient id="fp" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#6b4bd8"/><stop offset=".5" stop-color="#b89cf0"/>
+              <stop offset="1" stop-color="#e15bff"/></linearGradient></defs>
+            <rect width="200" height="92" fill="#05060a"/>
+            <path d="M16 72 C56 8 86 84 124 30 C142 6 170 18 186 34" fill="none"
+                  stroke="url(#fp)" stroke-width="11" stroke-linecap="round"/>
+            <circle cx="186" cy="34" r="8" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="tag">Quiet</span>
+        <div class="t-name">Finger Paint</div>
+        <div class="t-desc">Drag a finger and light trails out behind it, playing a note as it goes. Nothing is ever wrong, and it slowly fades itself clean so the screen never fills up.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+    </div>
+  </div>
+
+  <nav class="back" aria-label="Back">
+    <a href="index.html">&larr; Back to games</a>
+    <a href="../index.html">Home</a>
+  </nav>
+
+</div>
+
+</body>
+</html>
