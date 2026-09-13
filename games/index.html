@@ -1,243 +1,465 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Games — Cyber Skills Corner</title>
-<meta name="description" content="Seven small browser games and toys built for my kids. No accounts, no ads, no tracking.">
-<meta name="theme-color" content="#000000">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Games — cyberskillscorner</title>
+<meta name="description" content="Browser games by Steven Selby, housed on the site and served off a virtual RTX 3060. Self-contained — no accounts, no ads, no tracking." />
+<meta name="theme-color" content="#000000" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Russo+One&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23000%22/><rect x=%224%22 y=%224%22 width=%2224%22 height=%2224%22 rx=%222%22 fill=%22%230a0d0f%22 stroke=%22%232bbd79%22 stroke-width=%221%22/></svg>">
 <style>
-  :root{
-    --bg:#000;
-    --panel:#0a0d0b;
-    --line:#1b2620;
-    --ink:#dfe8e2;
-    --ink-soft:#7f8f86;
-    --green:#2bbd79;
-    --green-hi:#3fe39a;
-    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  :root {
+    --bg: #000;
+    --panel: #0a0d0f;
+    --panel-2: #0c0f12;
+    --metal: #15181b;
+    --border: #2c3033;
+    --green: #2bbd79;
+    --green-bright: #3fe39a;
+    --green-dim: #163a28;
+    --amber: #f59e0b;
+    --gold: #c9a24a;
+    --text: #f2faf6;
+    --text-soft: #cfe9dd;
+    --text-mute: #6a7a72;
+    --text-dim: #3a4a42;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
-  *{box-sizing:border-box}
-  html{color-scheme:dark}
-  body{
-    margin:0;background:var(--bg);color:var(--ink);
-    font-family:var(--mono);font-size:15px;line-height:1.6;
-    -webkit-text-size-adjust:100%;
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
   }
-  .wrap{max-width:880px;margin:0 auto;padding:40px 20px 64px}
-  a{color:var(--green-hi)}
-  .crumb{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 22px}
-  .crumb a{color:var(--ink-soft);text-decoration:none}
-  .crumb a:hover{color:var(--green-hi)}
-  h1{font-size:clamp(28px,6vw,40px);margin:0 0 10px;font-weight:700;letter-spacing:-.01em}
-  h1 span{color:var(--green)}
-  .lede{color:var(--ink-soft);margin:0 0 34px;max-width:62ch}
-  .grid{display:grid;gap:14px}
-  @media(min-width:640px){.grid{grid-template-columns:repeat(3,1fr)}}
-  .card{
-    display:flex;flex-direction:column;gap:10px;
-    background:var(--panel);border:1px solid var(--line);border-radius:10px;
-    padding:16px;text-decoration:none;color:inherit;
-    transition:border-color .16s ease,transform .16s ease;
+
+  .card {
+    width: 100%;
+    max-width: 1040px;
+    border-radius: 12px;
+    border: 1px solid #1f1f1f;
+    overflow: hidden;
+    background: var(--panel);
   }
-  .card:hover,.card:focus-visible{border-color:var(--green);transform:translateY(-2px);outline:none}
-  .card:focus-visible{box-shadow:0 0 0 2px var(--green-hi)}
-  .art{
-    height:92px;border-radius:7px;background:#06090a;border:1px solid var(--line);
-    display:flex;align-items:center;justify-content:center;overflow:hidden;
+
+  /* Browser chrome */
+  .chrome {
+    background: #111417;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
-  .art svg{width:100%;height:100%}
-  .t{font-weight:700;font-size:17px;letter-spacing:-.01em}
-  .d{color:var(--ink-soft);font-size:13px;line-height:1.5}
-  .tag{
-    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);
-    border:1px solid var(--line);border-radius:99px;padding:2px 8px;align-self:flex-start;
+  .dots { display: flex; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #2a2e32; }
+  .url-bar {
+    flex: 1;
+    background: #1a1f22;
+    border-radius: 9px;
+    padding: 4px 14px;
+    font-size: 11px;
+    color: var(--text-mute);
+    letter-spacing: 0.5px;
+    text-align: center;
   }
-  .section{
-    font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--green);
-    margin:34px 0 6px;font-weight:500;
+
+  /* RGB diffuser */
+  .diffuser {
+    height: 4px;
+    background: linear-gradient(to right,
+      #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff,
+      #ff3b3b, #ff9e2c, #f5e63d, #3fe39a, #37b6ff, #7b6bff, #e15bff,
+      #ff3b3b
+    );
+    background-size: 200% 100%;
+    animation: rgb-flow 8s linear infinite;
   }
-  .lede2{color:var(--ink-soft);margin:0 0 18px;max-width:62ch;font-size:14px}
-  .note{
-    margin-top:34px;border-top:1px solid var(--line);padding-top:18px;
-    color:var(--ink-soft);font-size:13px;max-width:70ch;
+  @keyframes rgb-flow {
+    0%   { background-position: 0% 0; }
+    100% { background-position: -100% 0; }
   }
-  .note b{color:var(--ink);font-weight:500}
+
+  /* Header */
+  .header {
+    background: #0c0f12;
+    padding: 18px 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .header-left .title {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 4px;
+    color: var(--text);
+    font-family: "Russo One", var(--mono);
+  }
+  .header-left .sub {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .header-right {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--green-bright);
+    text-align: right;
+  }
+
+  /* GPU status strip */
+  .gpu {
+    background: var(--panel-2);
+    padding: 14px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 30px;
+    border-bottom: 1px solid #12181466;
+  }
+  .gpu .gpu-id {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-soft);
+  }
+  .gpu .led {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green-bright);
+    box-shadow: 0 0 7px rgba(63,227,154,.7);
+  }
+  .stat { min-width: 104px; }
+  .stat .k { font-size: 9px; letter-spacing: 1.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .stat .v { font-size: 11px; letter-spacing: 0.5px; color: var(--text-soft); margin-bottom: 5px; }
+  .meter { height: 5px; background: #101613; border: 1px solid var(--green-dim); border-radius: 4px; overflow: hidden; }
+  .meter > span { display: block; height: 100%; background: linear-gradient(to right, var(--green), var(--green-bright)); }
+
+  /* Game library */
+  .lib { background: #080d0a; padding: 14px 24px 24px; }
+  .lib-cmd { font-size: 12px; letter-spacing: 0.5px; color: var(--text-soft); padding: 6px 0 16px; }
+  .lib-cmd .prompt { color: var(--green-bright); }
+
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .game {
+    background: var(--metal);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.game { cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+  a.game:hover, a.game:focus-visible {
+    border-color: var(--green-bright);
+    box-shadow: 0 0 12px rgba(63,227,154,.22);
+    transform: translateY(-2px);
+    outline: none;
+  }
+  .game .art {
+    height: 92px;
+    border-radius: 7px;
+    background: #06090a;
+    border: 1px solid var(--green-dim);
+    overflow: hidden;
+  }
+  .game .art svg { width: 100%; height: 100%; display: block; }
+  .game .tag {
+    align-self: flex-start;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--green-bright);
+    border: 1px solid var(--green-dim);
+    border-radius: 99px;
+    padding: 2px 9px;
+  }
+  .game .g-name { font-size: 16px; color: var(--text); }
+  a.game:hover .g-name, a.game:focus-visible .g-name { color: var(--green-bright); }
+  .game .g-desc { font-size: 11px; line-height: 1.6; color: var(--text-mute); }
+  .game .play {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--green-bright);
+  }
+  .game .play::before { content: "▶"; font-size: 9px; }
+
+  /* Nav footer */
+  .nav-footer {
+    background: var(--panel);
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-around;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-mute);
+  }
+  .nav-footer a { color: var(--text-mute); text-decoration: none; }
+  .nav-footer a:hover { color: var(--green-bright); }
+
+  @media (max-width: 560px) {
+    .header { flex-direction: column; gap: 4px; }
+    .header-right { text-align: left; }
+    .gpu { gap: 12px 20px; }
+    .nav-footer { flex-wrap: wrap; gap: 8px 14px; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <p class="crumb"><a href="/">cyberskillscorner</a> / games</p>
-  <h1>Games<span>.</span></h1>
-  <p class="lede">Small games I built for my kids. They run entirely in the browser — no accounts, no ads, nothing sent anywhere. Scores are kept on your own device.</p>
 
-  <p class="section">For the six-year-old</p>
-  <div class="grid">
-    <a class="card" href="bone-quarry/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#0b0f0d"/>
-          <g stroke="#2bbd79" stroke-width="2" fill="none" opacity=".55">
-            <path d="M0 30h200M0 60h200M50 0v92M100 0v92M150 0v92" stroke-dasharray="5 6"/>
-          </g>
-          <g fill="#dfe8e2">
-            <ellipse cx="100" cy="52" rx="26" ry="11"/>
-            <circle cx="128" cy="44" r="9"/>
-            <path d="M74 52 L48 44 L52 56 Z"/>
-            <rect x="86" y="60" width="5" height="16" rx="2"/>
-            <rect x="108" y="60" width="5" height="16" rx="2"/>
-          </g>
-          <path d="M100 34 v-16 l14 5 -14 5" fill="#3fe39a"/>
-        </svg>
-      </div>
-      <span class="tag">Ages 4+</span>
-      <span class="t">Bone Quarry</span>
-      <span class="d">Brush dirt off a buried skeleton, rebuild it bone by bone, then hear it read aloud. Ten dig sites — and four of them are not dinosaurs.</span>
-    </a>
+<div class="card">
 
-    <a class="card" href="plate-run/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#0b0f0d"/>
-          <path d="M0 70h200v22H0z" fill="#13201a"/>
-          <g fill="#dfe8e2">
-            <ellipse cx="92" cy="54" rx="24" ry="15"/>
-            <circle cx="122" cy="45" r="9"/>
-            <path d="M68 52 L40 44 L46 60 Z"/>
-            <rect x="80" y="66" width="5" height="10" rx="2"/>
-            <rect x="100" y="66" width="5" height="10" rx="2"/>
-          </g>
-          <g fill="#3fe39a">
-            <path d="M78 38 l7-12 7 12z"/><path d="M92 36 l8-14 8 14z"/><path d="M107 39 l6-11 6 11z"/>
-          </g>
-          <path d="M150 70 l10-16 10 16z" fill="#1b2620" stroke="#2bbd79"/>
-        </svg>
-      </div>
-      <span class="tag">Reflexes</span>
-      <span class="t">Plate Run</span>
-      <span class="d">An endless runner where the plates on a Stegosaurus's back are the health bar. Tap to jump, hold the corner to duck, and it never stops speeding up.</span>
-    </a>
-
-    <a class="card" href="thagomizer/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#0b0f0d"/>
-          <path d="M0 70h200v22H0z" fill="#13201a"/>
-          <ellipse cx="100" cy="74" rx="34" ry="7" fill="none" stroke="#2bbd79" stroke-width="2"/>
-          <g fill="#dfe8e2">
-            <ellipse cx="100" cy="52" rx="22" ry="14"/>
-            <circle cx="126" cy="45" r="8"/>
-            <path d="M78 50 L48 40 L54 58 Z"/>
-          </g>
-          <g stroke="#3fe39a" stroke-width="3" stroke-linecap="round">
-            <path d="M50 40 L36 28"/><path d="M48 48 L30 44"/>
-          </g>
-          <g fill="#1b2620" stroke="#2bbd79" stroke-width="1.5">
-            <path d="M170 62 q-14-8-26-2 l4 10 24 2z"/>
-          </g>
-        </svg>
-      </div>
-      <span class="tag">Timing</span>
-      <span class="t">Thagomizer</span>
-      <span class="d">Predators close in from both sides. Swing the spiked tail left, stomp right — but only when they're inside the ring. Swinging at nothing leaves you open.</span>
-    </a>
+  <div class="chrome">
+    <div class="dots">
+      <a class="dot" href="../index.html" aria-label="Go home" style="background:#ff5f57;"></a>
+      <a class="dot" href="../index.html" aria-label="Go home" style="background:#febc2e;"></a>
+      <a class="dot" href="../index.html" aria-label="Go home" style="background:#28c840;"></a>
+    </div>
+    <div class="url-bar">cyberskillscorner.xyz / games</div>
   </div>
 
-  <p class="section">For the littlest one</p>
-  <p class="lede2">No reading, no score, nothing to lose, and no way to get stuck. Just touch the screen and something happens.</p>
+  <div class="diffuser"></div>
 
-  <div class="grid">
-    <a class="card" href="tide-pool/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#07485c"/>
-          <path d="M0 74h200v18H0z" fill="#3a3220"/>
-          <g fill="#2bbd79" opacity=".5"><path d="M30 74 q-6-18 2-30 M44 74 q6-16 -1-26 M168 74 q6-18 -2-28"
-             stroke="#2bbd79" stroke-width="4" fill="none" stroke-linecap="round"/></g>
-          <ellipse cx="100" cy="40" rx="30" ry="17" fill="#dfe8e2"/>
-          <circle cx="130" cy="32" r="12" fill="#dfe8e2"/>
-          <circle cx="126" cy="29" r="2.6" fill="#07485c"/><circle cx="135" cy="29" r="2.6" fill="#07485c"/>
-          <ellipse cx="131" cy="36" rx="4" ry="3" fill="#3fe39a"/>
-          <g fill="none" stroke="#3fe39a" stroke-width="2" opacity=".8">
-            <circle cx="60" cy="28" r="4"/><circle cx="72" cy="16" r="3"/><circle cx="50" cy="14" r="2.5"/>
-          </g>
-        </svg>
-      </div>
-      <span class="tag">Ages 2+</span>
-      <span class="t">Tide Pool</span>
-      <span class="d">Tap the water and an Alaska sea animal appears. Touch one and it says its own name out loud — otter, puffin, seal, octopus, jellyfish, sea lion, sea star, crab.</span>
-    </a>
-
-    <a class="card" href="monster-music/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#0b0f0d"/>
-          <g>
-            <rect x="16" y="18" width="50" height="56" rx="10" fill="#2bbd79"/>
-            <rect x="75" y="18" width="50" height="56" rx="10" fill="#1d8f5c"/>
-            <rect x="134" y="18" width="50" height="56" rx="10" fill="#3fe39a"/>
-          </g>
-          <g fill="#0b0f0d">
-            <circle cx="32" cy="40" r="5"/><circle cx="50" cy="40" r="5"/>
-            <path d="M30 56 q11 12 22 0 q-11 6 -22 0z"/>
-            <circle cx="100" cy="40" r="5"/>
-            <ellipse cx="100" cy="58" rx="7" ry="5"/>
-            <circle cx="150" cy="40" r="5"/><circle cx="168" cy="40" r="5"/>
-            <path d="M148 54 h22 l-11 12z"/>
-          </g>
-          <path d="M134 18 l-6 -12 14 8z M184 18 l6 -12 -14 8z" fill="#3fe39a"/>
-        </svg>
-      </div>
-      <span class="tag">Loud</span>
-      <span class="t">Monster Music</span>
-      <span class="d">Six monsters, six noises — power chords, drums, and a growl. They blink, they breathe, and they yell when you poke them. Headphones optional, patience required.</span>
-    </a>
-
-    <a class="card" href="snow-palace/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#0a1030"/>
-          <path d="M0 22 q50 -10 100 4 t100 -2" stroke="#2bbd79" stroke-width="7" fill="none" opacity=".35"/>
-          <g fill="#1d3470">
-            <path d="M56 76V46l12-12 12 12v30z"/><path d="M92 76V34l14-14 14 14v42z"/><path d="M132 76V48l12-12 12 12v28z"/>
-          </g>
-          <path d="M0 76h200v16H0z" fill="#dfe8e2"/>
-          <g stroke="#dfe8e2" stroke-width="2.5" stroke-linecap="round">
-            <path d="M36 30v16M28 34l16 8M44 34l-16 8"/>
-            <path d="M170 44v12M164 47l12 6M176 47l-12 6"/>
-          </g>
-          <path d="M100 44 l-5 6 h10z" fill="#3fe39a"/>
-        </svg>
-      </div>
-      <span class="tag">Calm</span>
-      <span class="t">Snow Palace</span>
-      <span class="d">Tap to make it snow, drag to draw frost, and it piles up on the ground. Tap the snow queen and her dress changes color. The northern lights run the whole time.</span>
-    </a>
-
-    <a class="card" href="finger-paint/">
-      <div class="art">
-        <svg viewBox="0 0 200 92" aria-hidden="true">
-          <rect width="200" height="92" fill="#05060a"/>
-          <path d="M16 72 C56 8 86 84 124 30 C142 6 170 18 186 34" fill="none"
-                stroke="url(#fp)" stroke-width="11" stroke-linecap="round"/>
-          <defs><linearGradient id="fp" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#2bbd79"/><stop offset=".5" stop-color="#3fe39a"/>
-            <stop offset="1" stop-color="#dfe8e2"/></linearGradient></defs>
-          <circle cx="186" cy="34" r="8" fill="#fff"/>
-        </svg>
-      </div>
-      <span class="tag">Quiet</span>
-      <span class="t">Finger Paint</span>
-      <span class="d">Drag a finger and light trails out behind it, playing a note as it goes. Nothing is ever wrong, and it slowly fades itself clean so the screen never fills up.</span>
-    </a>
+  <div class="header">
+    <div class="header-left">
+      <div class="title">GAMES</div>
+      <div class="sub">geforce rtx // arcade</div>
+    </div>
+    <div class="header-right">RTX 3060 &middot; 12GB GDDR6 &middot; GA106</div>
   </div>
 
-  <p class="note">
-    <b>Built with a kid in the room.</b> Bone Quarry and Tide Pool both speak out loud with baked-in narration, so they double as
-    vocabulary practice. Every page here is a single static file — no build step, no framework, no third-party scripts beyond the web font.
-  </p>
+  <!-- GPU status strip -->
+  <div class="gpu">
+    <div class="gpu-id"><span class="led"></span> GA106 &middot; GPU online</div>
+    <div class="stat">
+      <div class="k">GPU CLOCK</div>
+      <div class="v">1.78 GHz</div>
+      <div class="meter"><span style="width:22%"></span></div>
+    </div>
+    <div class="stat">
+      <div class="k">VRAM</div>
+      <div class="v">1.2 / 12 GB</div>
+      <div class="meter"><span style="width:10%"></span></div>
+    </div>
+    <div class="stat" style="min-width:88px">
+      <div class="k">TEMP</div>
+      <div class="v">34&deg;C idle</div>
+    </div>
+    <div class="stat" style="min-width:80px">
+      <div class="k">FAN</div>
+      <div class="v">0% &middot; idle</div>
+    </div>
+    <div class="stat" style="min-width:92px">
+      <div class="k">POWER</div>
+      <div class="v">170W TGP</div>
+    </div>
+  </div>
+
+  <!-- Game library -->
+  <div class="lib">
+    <div class="lib-cmd"><span class="prompt">geforce:~$</span> ls ./games</div>
+
+    <div class="game-grid">
+
+      <!-- NEWEST FIRST: add each new game as a new <a class="game"> block directly below this line, so the latest game always appears at the top of the grid. -->
+
+      <!-- Dino Match -->
+      <a class="game" href="dino-match/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <!-- top-left: chip-die back -->
+            <rect x="56" y="10" width="40" height="32" rx="3" fill="#0a0d0f" stroke="#2a2416"/>
+            <g stroke="#c9a24a" stroke-width="1" opacity="0.35" fill="none">
+              <path d="M64 10V42 M72 10V42 M80 10V42 M88 10V42"/>
+              <path d="M56 20H96 M56 32H96"/>
+            </g>
+            <text x="76" y="29" fill="#c9a24a" opacity="0.7" font-size="7" text-anchor="middle" font-family="monospace">01</text>
+            <!-- top-right: matched sauropod -->
+            <rect x="104" y="10" width="40" height="32" rx="3" fill="#12181b" stroke="#e6c46b"/>
+            <g fill="#e6c46b">
+              <ellipse cx="126" cy="30" rx="9" ry="4"/>
+              <path d="M120 31 q-6 -3 -7 -11 q0 -3 2 -3 q2 0 2 3 q1 6 6 9 z"/>
+              <circle cx="113" cy="15" r="2.3"/>
+              <path d="M134 29 q8 -1 11 4 q-6 0 -11 2 z"/>
+              <rect x="121" y="33" width="2.2" height="6" rx="1"/>
+              <rect x="129" y="33" width="2.2" height="6" rx="1"/>
+            </g>
+            <!-- bottom-left: matched sauropod -->
+            <rect x="56" y="50" width="40" height="32" rx="3" fill="#12181b" stroke="#e6c46b"/>
+            <g fill="#e6c46b" transform="translate(-48 40)">
+              <ellipse cx="126" cy="30" rx="9" ry="4"/>
+              <path d="M120 31 q-6 -3 -7 -11 q0 -3 2 -3 q2 0 2 3 q1 6 6 9 z"/>
+              <circle cx="113" cy="15" r="2.3"/>
+              <path d="M134 29 q8 -1 11 4 q-6 0 -11 2 z"/>
+              <rect x="121" y="33" width="2.2" height="6" rx="1"/>
+              <rect x="129" y="33" width="2.2" height="6" rx="1"/>
+            </g>
+            <!-- bottom-right: chip-die back -->
+            <rect x="104" y="50" width="40" height="32" rx="3" fill="#0a0d0f" stroke="#2a2416"/>
+            <g stroke="#c9a24a" stroke-width="1" opacity="0.35" fill="none">
+              <path d="M112 50V82 M120 50V82 M128 50V82 M136 50V82"/>
+              <path d="M104 60H144 M104 72H144"/>
+            </g>
+            <text x="124" y="69" fill="#c9a24a" opacity="0.7" font-size="7" text-anchor="middle" font-family="monospace">04</text>
+          </svg>
+        </div>
+        <span class="tag">Memory</span>
+        <div class="g-name">Dino Match</div>
+        <div class="g-desc">Flip chip-die cards to find matching pairs. Eight prehistoric icons, sixteen tiles — clear the board in as few moves as you can.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Animal Match -->
+      <a class="game" href="animal-match/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <!-- top-left: chip-die back -->
+            <rect x="56" y="10" width="40" height="32" rx="3" fill="#0a0d0f" stroke="#1b2a22"/>
+            <g stroke="#2bbd79" stroke-width="1" opacity="0.35" fill="none">
+              <path d="M64 10V42 M72 10V42 M80 10V42 M88 10V42"/>
+              <path d="M56 20H96 M56 32H96"/>
+            </g>
+            <text x="76" y="29" fill="#2bbd79" opacity="0.7" font-size="7" text-anchor="middle" font-family="monospace">01</text>
+            <!-- top-right: matched paw -->
+            <rect x="104" y="10" width="40" height="32" rx="3" fill="#12181b" stroke="#3fe39a"/>
+            <ellipse cx="124" cy="30" rx="5" ry="4" fill="#dfe8e2"/>
+            <circle cx="119" cy="25" r="2" fill="#dfe8e2"/><circle cx="123" cy="23" r="2" fill="#dfe8e2"/><circle cx="127" cy="23" r="2" fill="#dfe8e2"/><circle cx="131" cy="25" r="2" fill="#dfe8e2"/>
+            <!-- bottom-left: matched paw -->
+            <rect x="56" y="50" width="40" height="32" rx="3" fill="#12181b" stroke="#3fe39a"/>
+            <ellipse cx="76" cy="69" rx="5" ry="4" fill="#dfe8e2"/>
+            <circle cx="71" cy="64" r="2" fill="#dfe8e2"/><circle cx="75" cy="62" r="2" fill="#dfe8e2"/><circle cx="79" cy="62" r="2" fill="#dfe8e2"/><circle cx="83" cy="64" r="2" fill="#dfe8e2"/>
+            <!-- bottom-right: chip-die back -->
+            <rect x="104" y="50" width="40" height="32" rx="3" fill="#0a0d0f" stroke="#1b2a22"/>
+            <g stroke="#2bbd79" stroke-width="1" opacity="0.35" fill="none">
+              <path d="M112 50V82 M120 50V82 M128 50V82 M136 50V82"/>
+              <path d="M104 60H144 M104 72H144"/>
+            </g>
+            <text x="124" y="69" fill="#2bbd79" opacity="0.7" font-size="7" text-anchor="middle" font-family="monospace">04</text>
+          </svg>
+        </div>
+        <span class="tag">Memory</span>
+        <div class="g-name">Animal Match</div>
+        <div class="g-desc">Flip chip-die cards to find matching pairs. Eight animals, sixteen tiles — clear the board in as few moves as you can.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Bone Quarry -->
+      <a class="game" href="bone-quarry/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <g stroke="#2bbd79" stroke-width="2" fill="none" opacity=".55">
+              <path d="M0 30h200M0 60h200M50 0v92M100 0v92M150 0v92" stroke-dasharray="5 6"/>
+            </g>
+            <g fill="#dfe8e2">
+              <ellipse cx="100" cy="52" rx="26" ry="11"/>
+              <circle cx="128" cy="44" r="9"/>
+              <path d="M74 52 L48 44 L52 56 Z"/>
+              <rect x="86" y="60" width="5" height="16" rx="2"/>
+              <rect x="108" y="60" width="5" height="16" rx="2"/>
+            </g>
+            <path d="M100 34 v-16 l14 5 -14 5" fill="#3fe39a"/>
+          </svg>
+        </div>
+        <span class="tag">Ages 4+</span>
+        <div class="g-name">Bone Quarry</div>
+        <div class="g-desc">Brush dirt off a buried skeleton, rebuild it bone by bone, then hear it read aloud. Ten dig sites — and four of them are not dinosaurs.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Plate Run -->
+      <a class="game" href="plate-run/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <path d="M0 70h200v22H0z" fill="#13201a"/>
+            <g fill="#dfe8e2">
+              <ellipse cx="92" cy="54" rx="24" ry="15"/>
+              <circle cx="122" cy="45" r="9"/>
+              <path d="M68 52 L40 44 L46 60 Z"/>
+              <rect x="80" y="66" width="5" height="10" rx="2"/>
+              <rect x="100" y="66" width="5" height="10" rx="2"/>
+            </g>
+            <g fill="#3fe39a">
+              <path d="M78 38 l7-12 7 12z"/><path d="M92 36 l8-14 8 14z"/><path d="M107 39 l6-11 6 11z"/>
+            </g>
+            <path d="M150 70 l10-16 10 16z" fill="#1b2620" stroke="#2bbd79"/>
+          </svg>
+        </div>
+        <span class="tag">Reflexes</span>
+        <div class="g-name">Plate Run</div>
+        <div class="g-desc">An endless runner where the plates on a Stegosaurus's back are the health bar. Tap to jump, hold the corner to duck, and it never stops speeding up.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+      <!-- Thagomizer -->
+      <a class="game" href="thagomizer/">
+        <div class="art">
+          <svg viewBox="0 0 200 92" aria-hidden="true">
+            <rect width="200" height="92" fill="#0b0f0d"/>
+            <path d="M0 70h200v22H0z" fill="#13201a"/>
+            <ellipse cx="100" cy="74" rx="34" ry="7" fill="none" stroke="#2bbd79" stroke-width="2"/>
+            <g fill="#dfe8e2">
+              <ellipse cx="100" cy="52" rx="22" ry="14"/>
+              <circle cx="126" cy="45" r="8"/>
+              <path d="M78 50 L48 40 L54 58 Z"/>
+            </g>
+            <g stroke="#3fe39a" stroke-width="3" stroke-linecap="round">
+              <path d="M50 40 L36 28"/><path d="M48 48 L30 44"/>
+            </g>
+            <g fill="#1b2620" stroke="#2bbd79" stroke-width="1.5">
+              <path d="M170 62 q-14-8-26-2 l4 10 24 2z"/>
+            </g>
+          </svg>
+        </div>
+        <span class="tag">Timing</span>
+        <div class="g-name">Thagomizer</div>
+        <div class="g-desc">Predators close in from both sides. Swing the spiked tail left, stomp right — but only when they're inside the ring. Swinging at nothing leaves you open.</div>
+        <div class="play">PLAY</div>
+      </a>
+
+    </div>
+  </div>
+
+  <nav class="nav-footer" aria-label="Site navigation">
+    <a href="../index.html">Home</a>
+    <a href="../about.html">About</a>
+    <a href="../certifications.html">Certifications</a>
+    <a href="../projects.html">Projects</a>
+    <a href="../labs.html">Labs</a>
+    <a href="../software.html">Software</a>
+    <a href="https://www.flickr.com/people/192044761@N05/" target="_blank" rel="noopener">Photography</a>
+    <a href="mailto:sjselby95@gmail.com">Contact</a>
+  </nav>
+
 </div>
+
 </body>
 </html>
