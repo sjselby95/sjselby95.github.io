@@ -18,7 +18,7 @@ The site has been rebuilt as an interactive SVG motherboard layout. Each section
 - **software.html** — Software list, themed as a BIOS setup utility
 - **projects.html** — Projects, themed as an M.2 NVMe SSD with a directory listing
 - **labs.html** — Labs, themed as a hypervisor / VM console
-- **games/** — Games hub (`games/index.html`), themed as an RTX 3060; links self-contained browser games (animal-match, bone-quarry, plate-run, thagomizer), newest first. See `games/README.md` for integration notes (esp. the `voice.mp3` audio-sprite constraint in bone-quarry)
+- **games/** — Games hub (`games/index.html`), themed as an RTX 3060; links self-contained browser games (dino-match, animal-match, bone-quarry, plate-run, thagomizer), newest first. See `games/README.md` for integration notes (esp. the `voice.mp3` audio-sprite constraint in bone-quarry)
 - **terminal.html** — CMOS-battery easter egg, a Skynet-style CRT boot terminal
 - Photography and Contact are not standalone pages — those links point to the Flickr profile and a `mailto:` respectively
 

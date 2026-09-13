@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dino Memory Match</title>
+  <meta name="description" content="Flip chip-die cards to find matching pairs — a dinosaur memory match game in the cyberskillscorner style. No accounts, no ads, no tracking.">
+  <meta name="theme-color" content="#000000">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #0a0d0f;
+      --surface-lit: #12181b;
+      --line: #2a2416;
+      --gold: #c9a24a;
+      --gold-bright: #e6c46b;
+      --text: #cfe9dd;
+      --text-dim: #6a7a72;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0; padding: 24px 16px;
+      font-family: var(--mono);
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: clamp(1.1rem, 4vw, 1.5rem);
+      font-weight: 500; letter-spacing: 0.02em;
+      color: var(--text);
+    }
+    h1 .prompt { color: var(--gold); margin-right: 0.5ch; }
+
+    .stats {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border: 1px solid var(--line); border-radius: 4px;
+      font-size: 0.85rem; overflow: hidden;
+    }
+    .stats span.cell { padding: 7px 16px; color: var(--text-dim); }
+    .stats span.cell + span.cell { border-left: 1px solid var(--line); }
+    .stats b { color: var(--gold-bright); font-weight: 500; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 2.5vw, 10px);
+      width: min(92vw, 480px); aspect-ratio: 1 / 1; margin-bottom: 24px;
+      perspective: 1200px;
+    }
+
+    .card {
+      background: none; border: 0; padding: 0; margin: 0;
+      cursor: pointer; touch-action: manipulation; border-radius: 3px;
+      -webkit-user-select: none; user-select: none;
+    }
+    .card:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 3px; }
+    .card.matched { animation: pop 0.4s ease; pointer-events: none; }
+    .card.flipped { pointer-events: none; }
+
+    .card-inner {
+      position: relative; display: block; width: 100%; height: 100%;
+      transform-style: preserve-3d; transition: transform 0.35s ease;
+    }
+    .card.flipped .card-inner,
+    .card.matched .card-inner { transform: rotateY(180deg); }
+
+    .face {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px; border: 1px solid var(--line);
+      -webkit-backface-visibility: hidden; backface-visibility: hidden;
+    }
+
+    /* Card back reads as a chip die: traces etched on dark substrate. */
+    .back {
+      background:
+        repeating-linear-gradient(90deg, transparent 0 11px, rgba(201,162,74,0.09) 11px 12px),
+        repeating-linear-gradient(0deg, transparent 0 11px, rgba(201,162,74,0.06) 11px 12px),
+        var(--surface);
+      color: rgba(201,162,74,0.55);
+      font-size: clamp(0.7rem, 2.6vw, 0.95rem);
+      letter-spacing: 0.1em;
+    }
+    .card:hover .back { border-color: var(--gold); color: var(--gold-bright); }
+
+    .front {
+      background: var(--surface-lit); transform: rotateY(180deg);
+      border-color: var(--gold);
+      font-size: clamp(1.8rem, 7.5vw, 3rem);
+    }
+    .front svg { width: 70%; height: 70%; display: block; }
+    .card.matched .front {
+      border-color: var(--gold-bright);
+      box-shadow: 0 0 0 1px var(--gold-bright), 0 0 18px rgba(230,196,107,0.28);
+    }
+
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+    button.restart {
+      background: transparent; border: 1px solid var(--gold);
+      color: var(--gold-bright); font-family: var(--mono);
+      padding: 10px 22px; font-size: 0.85rem; border-radius: 3px;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background-color 0.15s ease;
+    }
+    button.restart:hover { background: rgba(201,162,74,0.1); }
+    button.restart:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 3px; }
+
+    .win-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.94);
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 10; text-align: center; padding: 24px;
+    }
+    .win-overlay.show { display: flex; }
+    .win-overlay h2 {
+      margin: 0 0 4px; font-size: clamp(1.2rem, 5vw, 1.7rem);
+      font-weight: 500; color: var(--gold-bright);
+    }
+    .win-overlay p { color: var(--text-dim); font-size: 0.85rem; margin: 4px 0 20px; }
+    .stars { font-size: 1.6rem; margin: 12px 0; letter-spacing: 6px; color: var(--gold-bright); }
+
+    .panel { display: flex; flex-direction: column; align-items: center; }
+
+    @media (orientation: landscape) and (max-height: 520px) {
+      body { padding: 10px; flex-direction: row; gap: 24px; align-items: center; justify-content: center; }
+      .grid { width: min(72vh, 400px); margin: 0; }
+      h1 { margin-bottom: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card-inner { transition: none; }
+      .card.matched { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1><span class="prompt">&gt;</span>dino_match</h1>
+    <div class="stats" role="status" aria-live="polite">
+      <span class="cell">moves <b id="moves">0</b></span>
+      <span class="cell">pairs <b id="pairs">0</b>/8</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="panel">
+    <button class="restart" id="restart">new game</button>
+  </div>
+
+  <div class="win-overlay" id="winOverlay">
+    <h2>all pairs found</h2>
+    <div class="stars" id="finalStars"></div>
+    <p>cleared in <span id="finalMoves"></span> moves</p>
+    <button class="restart" id="playAgain">play again</button>
+  </div>
+
+  <script>
+    const dinos = ['sauropod','trex','stegosaurus','triceratops','pterodactyl','egg','footprint','volcano'];
+    const names = {
+      sauropod: 'sauropod', trex: 't-rex', stegosaurus: 'stegosaurus', triceratops: 'triceratops',
+      pterodactyl: 'pterodactyl', egg: 'egg', footprint: 'footprint', volcano: 'volcano'
+    };
+
+    // Hand-drawn gold silhouettes (0 0 100 100). Literal hex only — CSS var() does not resolve in SVG attributes.
+    const art = {
+      sauropod: '<g fill="#e6c46b"><ellipse cx="50" cy="60" rx="26" ry="13"/><path d="M32 58 C20 50 18 30 24 18 C26 12 32 12 32 18 C28 30 32 50 42 56 Z"/><ellipse cx="24" cy="16" rx="7" ry="5"/><path d="M74 58 C86 56 92 62 97 60 C92 66 84 68 74 66 Z"/><rect x="34" y="68" width="6" height="18" rx="2"/><rect x="46" y="70" width="6" height="18" rx="2"/><rect x="58" y="70" width="6" height="18" rx="2"/><rect x="66" y="68" width="6" height="16" rx="2"/></g>',
+      trex: '<g fill="#e6c46b"><path d="M42 52 C26 46 12 40 4 45 C12 53 26 57 42 62 Z"/><ellipse cx="50" cy="54" rx="20" ry="18"/><path d="M58 42 L70 30 C74 27 79 29 78 33 L70 48 Z"/><ellipse cx="80" cy="34" rx="13" ry="8"/><rect x="60" y="54" width="10" height="3" rx="1.5"/><path d="M46 69 L44 90 L52 90 L55 70 Z"/><path d="M58 69 L58 90 L66 90 L64 69 Z"/></g>',
+      stegosaurus: '<g><g fill="#e6c46b"><ellipse cx="50" cy="62" rx="28" ry="12"/><path d="M24 62 C14 60 10 54 6 56 C8 62 16 66 24 68 Z"/><ellipse cx="10" cy="58" rx="6" ry="4"/><path d="M76 60 C88 58 94 54 99 58 C94 64 86 66 76 66 Z"/><path d="M34 52 L40 34 L46 52 Z"/><path d="M48 50 L54 30 L60 50 Z"/><path d="M62 52 L67 36 L72 52 Z"/><rect x="36" y="72" width="6" height="16" rx="2"/><rect x="58" y="72" width="6" height="16" rx="2"/></g><path d="M94 54 L100 48 M96 60 L100 55" stroke="#e6c46b" stroke-width="2.5" stroke-linecap="round" fill="none"/></g>',
+      triceratops: '<g fill="#e6c46b"><ellipse cx="58" cy="60" rx="24" ry="14"/><path d="M84 60 C94 58 98 62 99 60 C97 66 90 68 84 66 Z"/><path d="M32 42 C18 42 12 54 16 66 C22 74 34 74 40 68 C34 58 34 48 40 44 Z"/><ellipse cx="26" cy="58" rx="12" ry="9"/><path d="M16 54 L6 48 L17 52 Z"/><path d="M22 48 L16 36 L26 46 Z"/><path d="M30 48 L26 34 L35 46 Z"/><rect x="46" y="70" width="6" height="16" rx="2"/><rect x="68" y="70" width="6" height="16" rx="2"/></g>',
+      pterodactyl: '<g fill="#e6c46b"><ellipse cx="50" cy="54" rx="6" ry="13"/><path d="M50 40 L56 28 L48 32 Z"/><path d="M50 44 L66 34 L52 46 Z"/><path d="M48 46 C30 42 12 48 4 62 C20 58 34 60 46 64 Z"/><path d="M52 46 C70 42 88 48 96 62 C80 58 66 60 54 64 Z"/><path d="M47 66 L44 78 M53 66 L56 78" stroke="#e6c46b" stroke-width="2.5" stroke-linecap="round" fill="none"/></g>',
+      egg: '<g><path d="M50 18 C65 18 71 44 71 60 C71 77 62 88 50 88 C38 88 29 77 29 60 C29 44 35 18 50 18 Z" fill="#e6c46b"/><path d="M40 56 L48 50 L45 60 L53 54" fill="none" stroke="#12181b" stroke-width="2.5" stroke-linejoin="round"/></g>',
+      footprint: '<g fill="#e6c46b"><ellipse cx="50" cy="68" rx="12" ry="14"/><path d="M50 54 C48 42 46 32 50 24 C54 32 52 42 50 54 Z"/><path d="M40 58 C34 48 28 42 26 34 C34 40 42 48 44 58 Z"/><path d="M60 58 C66 48 72 42 74 34 C66 40 58 48 56 58 Z"/></g>',
+      volcano: '<g><path d="M16 84 L40 42 L60 42 L84 84 Z" fill="#e6c46b"/><path d="M40 42 L46 50 L54 50 L60 42 Z" fill="#12181b"/><path d="M46 50 C45 58 50 60 50 68 C50 60 55 58 54 50 Z" fill="#e6c46b"/></g>'
+    };
+
+    let flippedCards = [], matchedPairs = 0, moves = 0, isLocked = false;
+
+    const grid = document.getElementById('grid');
+    const overlay = document.getElementById('winOverlay');
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function starsFor(m) {
+      if (m <= 11) return 3;
+      if (m <= 15) return 2;
+      return 1;
+    }
+
+    function initGame() {
+      overlay.classList.remove('show');
+      grid.innerHTML = '';
+      flippedCards = []; matchedPairs = 0; moves = 0; isLocked = false;
+      updateStats();
+
+      shuffle([...dinos, ...dinos]).forEach((id, i) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'card';
+        card.dataset.animal = id;
+        card.setAttribute('aria-label', 'face-down card');
+        card.innerHTML =
+          '<span class="card-inner">' +
+            '<span class="face back" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
+            '<span class="face front" aria-hidden="true"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' + art[id] + '</svg></span>' +
+          '</span>';
+        card.addEventListener('click', () => flipCard(card));
+        grid.appendChild(card);
+      });
+    }
+
+    function flipCard(card) {
+      if (isLocked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      card.classList.add('flipped');
+      card.setAttribute('aria-label', names[card.dataset.animal]);
+      flippedCards.push(card);
+      if (flippedCards.length < 2) return;
+
+      moves++; updateStats();
+      isLocked = true;
+      const [a, b] = flippedCards;
+
+      if (a.dataset.animal === b.dataset.animal) {
+        setTimeout(() => {
+          a.classList.remove('flipped'); b.classList.remove('flipped');
+          a.classList.add('matched');   b.classList.add('matched');
+          matchedPairs++; updateStats();
+          flippedCards = []; isLocked = false;
+          if (matchedPairs === dinos.length) showWin();
+        }, 400);
+      } else {
+        setTimeout(() => {
+          [a, b].forEach(c => {
+            c.classList.remove('flipped');
+            c.setAttribute('aria-label', 'face-down card');
+          });
+          flippedCards = []; isLocked = false;
+        }, 900);
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('moves').textContent = moves;
+      document.getElementById('pairs').textContent = matchedPairs;
+    }
+
+    function showWin() {
+      document.getElementById('finalMoves').textContent = moves;
+      document.getElementById('finalStars').textContent = '◆'.repeat(starsFor(moves));
+      overlay.classList.add('show');
+      document.getElementById('playAgain').focus();
+    }
+
+    document.getElementById('restart').addEventListener('click', initGame);
+    document.getElementById('playAgain').addEventListener('click', initGame);
+    initGame();
+  </script>
+</body>
+</html>
