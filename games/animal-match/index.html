@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animal Memory Match</title>
+  <meta name="description" content="Flip chip-die cards to find matching pairs — a memory match game in the cyberskillscorner style. No accounts, no ads, no tracking.">
+  <meta name="theme-color" content="#000000">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #0a0d0f;
+      --surface-lit: #12181b;
+      --line: #1b2a22;
+      --green: #2bbd79;
+      --green-bright: #3fe39a;
+      --text: #cfe9dd;
+      --text-dim: #6a7a72;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0; padding: 24px 16px;
+      font-family: var(--mono);
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: clamp(1.1rem, 4vw, 1.5rem);
+      font-weight: 500; letter-spacing: 0.02em;
+      color: var(--text);
+    }
+    h1 .prompt { color: var(--green); margin-right: 0.5ch; }
+
+    .stats {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border: 1px solid var(--line); border-radius: 4px;
+      font-size: 0.85rem; overflow: hidden;
+    }
+    .stats span.cell { padding: 7px 16px; color: var(--text-dim); }
+    .stats span.cell + span.cell { border-left: 1px solid var(--line); }
+    .stats b { color: var(--green-bright); font-weight: 500; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 2.5vw, 10px);
+      width: min(92vw, 480px); aspect-ratio: 1 / 1; margin-bottom: 24px;
+      perspective: 1200px;
+    }
+
+    .card {
+      background: none; border: 0; padding: 0; margin: 0;
+      cursor: pointer; touch-action: manipulation; border-radius: 3px;
+      -webkit-user-select: none; user-select: none;
+    }
+    .card:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 3px; }
+    .card.matched { animation: pop 0.4s ease; pointer-events: none; }
+    .card.flipped { pointer-events: none; }
+
+    .card-inner {
+      position: relative; display: block; width: 100%; height: 100%;
+      transform-style: preserve-3d; transition: transform 0.35s ease;
+    }
+    .card.flipped .card-inner,
+    .card.matched .card-inner { transform: rotateY(180deg); }
+
+    .face {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px; border: 1px solid var(--line);
+      -webkit-backface-visibility: hidden; backface-visibility: hidden;
+    }
+
+    /* Card back reads as a chip die: traces etched on dark substrate. */
+    .back {
+      background:
+        repeating-linear-gradient(90deg, transparent 0 11px, rgba(43,189,121,0.09) 11px 12px),
+        repeating-linear-gradient(0deg, transparent 0 11px, rgba(43,189,121,0.06) 11px 12px),
+        var(--surface);
+      color: rgba(43,189,121,0.55);
+      font-size: clamp(0.7rem, 2.6vw, 0.95rem);
+      letter-spacing: 0.1em;
+    }
+    .card:hover .back { border-color: var(--green); color: var(--green-bright); }
+
+    .front {
+      background: var(--surface-lit); transform: rotateY(180deg);
+      border-color: var(--green);
+      font-size: clamp(1.8rem, 7.5vw, 3rem);
+    }
+    .card.matched .front {
+      border-color: var(--green-bright);
+      box-shadow: 0 0 0 1px var(--green-bright), 0 0 18px rgba(63,227,154,0.28);
+    }
+
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+    button.restart {
+      background: transparent; border: 1px solid var(--green);
+      color: var(--green-bright); font-family: var(--mono);
+      padding: 10px 22px; font-size: 0.85rem; border-radius: 3px;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background-color 0.15s ease;
+    }
+    button.restart:hover { background: rgba(43,189,121,0.1); }
+    button.restart:focus-visible { outline: 2px solid var(--green-bright); outline-offset: 3px; }
+
+    .win-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.94);
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 10; text-align: center; padding: 24px;
+    }
+    .win-overlay.show { display: flex; }
+    .win-overlay h2 {
+      margin: 0 0 4px; font-size: clamp(1.2rem, 5vw, 1.7rem);
+      font-weight: 500; color: var(--green-bright);
+    }
+    .win-overlay p { color: var(--text-dim); font-size: 0.85rem; margin: 4px 0 20px; }
+    .stars { font-size: 1.6rem; margin: 12px 0; letter-spacing: 6px; color: var(--green-bright); }
+
+    .panel { display: flex; flex-direction: column; align-items: center; }
+
+    @media (orientation: landscape) and (max-height: 520px) {
+      body { padding: 10px; flex-direction: row; gap: 24px; align-items: center; justify-content: center; }
+      .grid { width: min(72vh, 400px); margin: 0; }
+      h1 { margin-bottom: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card-inner { transition: none; }
+      .card.matched { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1><span class="prompt">&gt;</span>animal_match</h1>
+    <div class="stats" role="status" aria-live="polite">
+      <span class="cell">moves <b id="moves">0</b></span>
+      <span class="cell">pairs <b id="pairs">0</b>/8</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="panel">
+    <button class="restart" id="restart">new game</button>
+  </div>
+
+  <div class="win-overlay" id="winOverlay">
+    <h2>all pairs found</h2>
+    <div class="stars" id="finalStars"></div>
+    <p>cleared in <span id="finalMoves"></span> moves</p>
+    <button class="restart" id="playAgain">play again</button>
+  </div>
+
+  <script>
+    const animals = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼'];
+    const names = { '🐶':'dog','🐱':'cat','🐭':'mouse','🐹':'hamster','🐰':'rabbit','🦊':'fox','🐻':'bear','🐼':'panda' };
+
+    let flippedCards = [], matchedPairs = 0, moves = 0, isLocked = false;
+
+    const grid = document.getElementById('grid');
+    const overlay = document.getElementById('winOverlay');
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function starsFor(m) {
+      if (m <= 11) return 3;
+      if (m <= 15) return 2;
+      return 1;
+    }
+
+    function initGame() {
+      overlay.classList.remove('show');
+      grid.innerHTML = '';
+      flippedCards = []; matchedPairs = 0; moves = 0; isLocked = false;
+      updateStats();
+
+      shuffle([...animals, ...animals]).forEach((emoji, i) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'card';
+        card.dataset.animal = emoji;
+        card.setAttribute('aria-label', 'face-down card');
+        card.innerHTML =
+          '<span class="card-inner">' +
+            '<span class="face back" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
+            '<span class="face front" aria-hidden="true">' + emoji + '</span>' +
+          '</span>';
+        card.addEventListener('click', () => flipCard(card));
+        grid.appendChild(card);
+      });
+    }
+
+    function flipCard(card) {
+      if (isLocked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      card.classList.add('flipped');
+      card.setAttribute('aria-label', names[card.dataset.animal]);
+      flippedCards.push(card);
+      if (flippedCards.length < 2) return;
+
+      moves++; updateStats();
+      isLocked = true;
+      const [a, b] = flippedCards;
+
+      if (a.dataset.animal === b.dataset.animal) {
+        setTimeout(() => {
+          a.classList.remove('flipped'); b.classList.remove('flipped');
+          a.classList.add('matched');   b.classList.add('matched');
+          matchedPairs++; updateStats();
+          flippedCards = []; isLocked = false;
+          if (matchedPairs === animals.length) showWin();
+        }, 400);
+      } else {
+        setTimeout(() => {
+          [a, b].forEach(c => {
+            c.classList.remove('flipped');
+            c.setAttribute('aria-label', 'face-down card');
+          });
+          flippedCards = []; isLocked = false;
+        }, 900);
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('moves').textContent = moves;
+      document.getElementById('pairs').textContent = matchedPairs;
+    }
+
+    function showWin() {
+      document.getElementById('finalMoves').textContent = moves;
+      document.getElementById('finalStars').textContent = '◆'.repeat(starsFor(moves));
+      overlay.classList.add('show');
+      document.getElementById('playAgain').focus();
+    }
+
+    document.getElementById('restart').addEventListener('click', initGame);
+    document.getElementById('playAgain').addEventListener('click', initGame);
+    initGame();
+  </script>
+</body>
+</html>
