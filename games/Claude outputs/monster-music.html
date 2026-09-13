@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Monster Music</title>
+<meta name="description" content="A noise toy for very small people. Six pads, six monsters, one volume: loud.">
+<meta name="theme-color" content="#120a18">
+<style>
+  html{color-scheme:dark;height:100%}
+  body{
+    margin:0;height:100%;background:#120a18;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  canvas{display:block;width:100%;height:100%;position:fixed;inset:0}
+  .home{
+    position:fixed;left:10px;top:calc(10px + env(safe-area-inset-top));z-index:3;
+    width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.4);
+    color:rgba(255,255,255,.5);text-decoration:none;font-size:19px;line-height:34px;text-align:center;
+  }
+  .gate{
+    position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(circle at 50% 45%, #2a1338 0%, #120a18 70%);
+    color:#fff;cursor:pointer;
+  }
+  .gate.gone{display:none}
+  .gate h1{font-size:clamp(34px,11vw,60px);margin:0;font-weight:800;letter-spacing:-.02em}
+  .gate p{margin:0;color:#c4a7d8;font-size:17px}
+  .gate svg{width:min(46vw,190px);height:auto}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<a class="home" href="../" aria-label="Back">&#8592;</a>
+
+<div class="gate" id="gate">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="60" cy="62" r="46" fill="#ff4d9d"/>
+    <circle cx="45" cy="52" r="9" fill="#120a18"/><circle cx="75" cy="52" r="9" fill="#120a18"/>
+    <circle cx="47" cy="49" r="3" fill="#fff"/><circle cx="77" cy="49" r="3" fill="#fff"/>
+    <path d="M40 78 q20 18 40 0 q-20 8 -40 0z" fill="#120a18"/>
+    <path d="M42 80 l5 7 5-7z M56 82 l5 8 5-8z M70 80 l5 7 5-7z" fill="#fff"/>
+    <path d="M26 30 l10 18 -18 -4z M94 30 l-10 18 18 -4z" fill="#ff4d9d"/>
+  </svg>
+  <h1>Monster Music</h1>
+  <p>Tap to wake them up</p>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- audio ---------------- */
+let AC = null, master = null, shaper = null;
+function boot(){
+  if(AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain();
+  master.gain.value = 0.9;
+  master.connect(AC.destination);
+  shaper = AC.createWaveShaper();
+  const n = 1024, curve = new Float32Array(n);
+  for(let i = 0; i < n; i++){
+    const x = (i / (n - 1)) * 2 - 1;
+    curve[i] = Math.tanh(x * 3.2);     /* soft clip — grit without shredding a phone speaker */
+  }
+  shaper.curve = curve;
+  shaper.oversample = "2x";
+  shaper.connect(master);
+}
+function env(node, t0, a, d, peak){
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak, t0 + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + d);
+  node.connect(g);
+  return g;
+}
+function chord(root, dirty){
+  const t0 = AC.currentTime;
+  [1, 1.5, 2].forEach((mult, i) => {
+    [0, 3].forEach(cents => {
+      const o = AC.createOscillator();
+      o.type = dirty ? "sawtooth" : "triangle";
+      o.frequency.value = root * mult * Math.pow(2, cents / 1200);
+      const g = env(o, t0, 0.012, 0.85, 0.16 / (i + 1));
+      g.connect(dirty ? shaper : master);
+      o.start(t0); o.stop(t0 + 1.0);
+    });
+  });
+}
+function noise(dur){
+  const len = Math.floor(AC.sampleRate * dur);
+  const buf = AC.createBuffer(1, len, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const s = AC.createBufferSource(); s.buffer = buf;
+  return s;
+}
+function kick(){
+  const t0 = AC.currentTime;
+  const o = AC.createOscillator();
+  o.frequency.setValueAtTime(150, t0);
+  o.frequency.exponentialRampToValueAtTime(42, t0 + 0.14);
+  const g = env(o, t0, 0.008, 0.28, 0.55);
+  g.connect(master);
+  o.start(t0); o.stop(t0 + 0.4);
+}
+function snare(){
+  const t0 = AC.currentTime;
+  const s = noise(0.22);
+  const f = AC.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1400;
+  const g = env(s, t0, 0.004, 0.19, 0.3);
+  g.connect(f); f.connect(master);
+  s.start(t0);
+}
+function crash(){
+  const t0 = AC.currentTime;
+  const s = noise(1.1);
+  const f = AC.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 4200;
+  const g = env(s, t0, 0.005, 1.0, 0.2);
+  g.connect(f); f.connect(master);
+  s.start(t0);
+}
+function growl(){
+  const t0 = AC.currentTime;
+  const o = AC.createOscillator();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(118, t0);
+  o.frequency.exponentialRampToValueAtTime(46, t0 + 0.55);
+  const lfo = AC.createOscillator(), lg = AC.createGain();
+  lfo.frequency.value = 26; lg.gain.value = 22;          /* the rasp */
+  lfo.connect(lg); lg.connect(o.frequency);
+  const f = AC.createBiquadFilter();
+  f.type = "bandpass"; f.frequency.setValueAtTime(620, t0);
+  f.frequency.exponentialRampToValueAtTime(240, t0 + 0.5); f.Q.value = 3;
+  const g = env(o, t0, 0.03, 0.62, 0.5);
+  g.connect(f); f.connect(shaper);
+  o.start(t0); lfo.start(t0);
+  o.stop(t0 + 0.8); lfo.stop(t0 + 0.8);
+}
+
+/* ---------------- pads ---------------- */
+const PADS = [
+  { col: "#ff4d9d", dark: "#a3175c", play: () => chord(82.4, true),  horns: true,  eyes: 2, mouth: "teeth" },
+  { col: "#ffb23d", dark: "#b06a12", play: kick,                     horns: false, eyes: 1, mouth: "o" },
+  { col: "#4de0c0", dark: "#137a66", play: snare,                    horns: false, eyes: 3, mouth: "grin" },
+  { col: "#8b5cf6", dark: "#4c2aa8", play: growl,                    horns: true,  eyes: 2, mouth: "teeth" },
+  { col: "#f2e14c", dark: "#9c8f10", play: crash,                    horns: false, eyes: 2, mouth: "grin" },
+  { col: "#ff6b4a", dark: "#a8321a", play: () => chord(123.5, true),  horns: true,  eyes: 1, mouth: "o" }
+];
+
+const cv = document.getElementById("cv"), g2 = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1, cols = 2, rows = 3;
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if(W > H){ cols = 3; rows = 2; } else { cols = 2; rows = 3; }
+}
+window.addEventListener("resize", resize);
+
+const state = PADS.map(() => ({ hit: 0, wob: Math.random() * 6 }));
+let shake = 0, sparks = [];
+
+function padRect(i){
+  const c = i % cols, r = (i / cols) | 0;
+  const pw = W / cols, ph = H / rows;
+  const m = Math.min(pw, ph) * 0.05;
+  const lid = r === 0 ? m * 1.5 : 0;      /* the top row needs headroom for horns */
+  return { x: c * pw + m, y: r * ph + m * 1.6 + lid, w: pw - m * 2, h: ph - m * 2.6 - lid };
+}
+function padAt(x, y){
+  const c = Math.min(cols - 1, (x / (W / cols)) | 0);
+  const r = Math.min(rows - 1, (y / (H / rows)) | 0);
+  return r * cols + c;
+}
+
+function roundRect(x, y, w, h, r){
+  g2.beginPath();
+  r = Math.min(r, w / 2, h / 2);
+  g2.moveTo(x + r, y);
+  g2.arcTo(x + w, y, x + w, y + h, r);
+  g2.arcTo(x + w, y + h, x, y + h, r);
+  g2.arcTo(x, y + h, x, y, r);
+  g2.arcTo(x, y, x + w, y, r);
+  g2.closePath();
+}
+
+function drawMonster(p, st, rc, t){
+  const hit = st.hit;
+  const squash = 1 - hit * 0.06;
+  const cxp = rc.x + rc.w / 2, cyp = rc.y + rc.h / 2;
+  const s = Math.min(rc.w, rc.h);
+  const breathe = Math.sin(t * 1.6 + st.wob) * 0.012;
+
+  g2.save();
+  g2.translate(cxp, cyp);
+  g2.scale(1 + hit * 0.05 + breathe, squash + breathe);
+
+  const top = -rc.h / 2;
+  if(p.horns){
+    g2.fillStyle = p.dark;
+    g2.beginPath(); g2.moveTo(-s * 0.34, top + s * 0.06); g2.lineTo(-s * 0.46, top - s * 0.24); g2.lineTo(-s * 0.12, top + s * 0.02); g2.closePath(); g2.fill();
+    g2.beginPath(); g2.moveTo(s * 0.34, top + s * 0.06); g2.lineTo(s * 0.46, top - s * 0.24); g2.lineTo(s * 0.12, top + s * 0.02); g2.closePath(); g2.fill();
+  }
+
+  roundRect(-rc.w / 2, top, rc.w, rc.h, s * 0.16);
+  g2.fillStyle = p.col; g2.fill();
+  g2.lineWidth = s * 0.035; g2.strokeStyle = p.dark; g2.stroke();
+
+  /* eyes */
+  g2.fillStyle = "#170d1c";
+  const er = s * 0.085, blink = (Math.sin(t * 0.9 + st.wob * 2) > 0.985) ? 0.15 : 1;
+  const eyePos = p.eyes === 1 ? [[0, -s * 0.09]] :
+                 p.eyes === 2 ? [[-s * 0.15, -s * 0.09], [s * 0.15, -s * 0.09]] :
+                                [[-s * 0.2, -s * 0.08], [0, -s * 0.14], [s * 0.2, -s * 0.08]];
+  eyePos.forEach(e => {
+    g2.beginPath(); g2.ellipse(e[0], e[1], er, er * blink * (1 - hit * 0.5), 0, 0, 7); g2.fill();
+  });
+  g2.fillStyle = "#fff";
+  eyePos.forEach(e => {
+    g2.beginPath(); g2.arc(e[0] + er * 0.3, e[1] - er * 0.3, er * 0.3 * blink, 0, 7); g2.fill();
+  });
+
+  /* mouth */
+  g2.fillStyle = "#170d1c";
+  const my = s * 0.14, open = 1 + hit * 2.2;
+  if(p.mouth === "o"){
+    g2.beginPath(); g2.ellipse(0, my, s * 0.12, s * 0.07 * open, 0, 0, 7); g2.fill();
+  } else if(p.mouth === "grin"){
+    g2.beginPath();
+    g2.moveTo(-s * 0.18, my - s * 0.03);
+    g2.quadraticCurveTo(0, my + s * 0.14 * open, s * 0.18, my - s * 0.03);
+    g2.quadraticCurveTo(0, my + s * 0.05, -s * 0.18, my - s * 0.03);
+    g2.fill();
+  } else {
+    g2.beginPath();
+    g2.moveTo(-s * 0.2, my - s * 0.04);
+    g2.quadraticCurveTo(0, my + s * 0.16 * open, s * 0.2, my - s * 0.04);
+    g2.closePath(); g2.fill();
+    g2.fillStyle = "#fff";
+    for(let i = -1; i <= 1; i++){
+      g2.beginPath();
+      g2.moveTo(i * s * 0.1 - s * 0.035, my - s * 0.035);
+      g2.lineTo(i * s * 0.1 + s * 0.035, my - s * 0.035);
+      g2.lineTo(i * s * 0.1, my + s * 0.035);
+      g2.closePath(); g2.fill();
+    }
+  }
+  g2.restore();
+}
+
+function frame(ms){
+  const t = ms / 1000;
+  g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if(shake > 0){
+    g2.translate((Math.random() - 0.5) * 9 * shake, (Math.random() - 0.5) * 9 * shake);
+    shake = Math.max(0, shake - 0.045);
+  }
+  g2.fillStyle = "#120a18";
+  g2.fillRect(-20, -20, W + 40, H + 40);
+
+  PADS.forEach((p, i) => {
+    const st = state[i];
+    st.hit = Math.max(0, st.hit - 0.055);
+    drawMonster(p, st, padRect(i), t);
+  });
+
+  sparks = sparks.filter(s => s.life > 0);
+  sparks.forEach(s => {
+    s.life -= 0.03; s.x += s.vx; s.y += s.vy; s.vy += 0.45;
+    g2.globalAlpha = Math.max(0, s.life);
+    g2.fillStyle = s.col;
+    g2.beginPath(); g2.arc(s.x, s.y, s.r, 0, 7); g2.fill();
+    g2.globalAlpha = 1;
+  });
+
+  requestAnimationFrame(frame);
+}
+
+function bang(x, y){
+  const i = padAt(x, y);
+  const p = PADS[i];
+  state[i].hit = 1;
+  shake = 1;
+  try{ p.play(); }catch(e){}
+  if(navigator.vibrate) { try{ navigator.vibrate(18); }catch(e){} }
+  for(let n = 0; n < 16; n++){
+    const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 7;
+    sparks.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3,
+                  r: 3 + Math.random() * 6, col: p.col, life: 1 });
+  }
+}
+
+const gate = document.getElementById("gate");
+gate.addEventListener("pointerdown", e => {
+  boot();
+  gate.classList.add("gone");
+  e.preventDefault();
+});
+window.addEventListener("pointerdown", e => {
+  if(!AC || !gate.classList.contains("gone")) return;
+  if(e.target.classList && e.target.classList.contains("home")) return;
+  bang(e.clientX, e.clientY);
+}, { passive: true });
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
