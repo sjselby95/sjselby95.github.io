@@ -86,8 +86,9 @@
     display:grid;place-items:center;z-index:4
   }
   .corner svg{width:28px;height:28px}
-  #soundBtn{left:12px}
+  #soundBtn{left:74px}
   #bubbleBtn{right:12px}
+  .home{left:12px;text-decoration:none}
 </style>
 </head>
 <body>
@@ -99,6 +100,9 @@
     <circle cx="16" cy="14" r="5" fill="#ff8a8a"/><circle cx="80" cy="14" r="5" fill="#8fd6f2"/>
   </svg>
 
+  <a class="corner home" href="../toys.html" aria-label="Back to toys">
+    <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-7 7 7 7"/></svg>
+  </a>
   <button class="corner" id="soundBtn" aria-label="Sound on" aria-pressed="true">
     <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 10h4l5-4v14l-5-4H4z" fill="#2f7fb0"/>

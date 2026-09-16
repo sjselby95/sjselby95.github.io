@@ -83,6 +83,14 @@
   }
   .round svg{width:26px;height:26px}
 
+  .home{
+    position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:4;
+    width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(159,220,255,.14);border:2px solid rgba(159,220,255,.3);
+    text-decoration:none;
+  }
+  .home svg{width:24px;height:24px}
+
   .snow{
     height:64px;min-width:132px;padding:0 28px;border-radius:32px;
     background:linear-gradient(180deg,#bfe9ff,#6fbff0);
@@ -102,6 +110,10 @@
   <canvas id="bg" aria-hidden="true"></canvas>
   <canvas id="draw" aria-label="Drawing area. Draw to make a snowflake."></canvas>
   <canvas id="fx" aria-hidden="true"></canvas>
+
+  <a class="home" href="../toys.html" aria-label="Back to toys">
+    <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#9fdcff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-7 7 7 7"/></svg>
+  </a>
 
   <div class="bar">
     <div class="row" role="group" aria-label="Colors">

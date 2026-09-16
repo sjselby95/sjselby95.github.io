@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#a9dcf7">
+<title>Snowman Builder</title>
+<!--
+  SNOWMAN BUILDER — roll, stack, and dress up a snowman for a 3-year-old (phone, touch-first)
+
+  How it plays:
+  1. ROLL: Touch the snow and move a finger around. The snowball follows and gets bigger as it rolls,
+     leaving tracks. Tapping it also makes it grow. When it's big enough it pops onto the snowman.
+     Three snowballs: big bottom, middle, then the head. The icons in the bottom tray fill in as she goes.
+  2. DECORATE: The tray switches to decorations: eyes, carrot nose, smile, buttons, stick arms,
+     three scarves, top hat, pink hat, earmuffs, mittens, and a little bird. Tap to add, tap again to take off.
+     Each item is said out loud.
+  3. Tap the finished snowman and he wiggles, waves (if he has arms), and says hello.
+  - Top-right buttons: snowflake = big snowfall; sun = melt the snowman and build a new one.
+  - Top-left: sound/voice on/off.
+
+  INTEGRATION NOTES (for Claude Code):
+  - This is a TOY. Parent page is /toys.html. Add a card for it there, and place the file
+    wherever the other toys linked from /toys.html already live.
+  - Fully self-contained: no external fonts, images, audio, scripts, or storage.
+  - No in-page back link on purpose (toddler taps). If the other toys link back to /toys.html,
+    keep it small and away from the corner buttons.
+  - Voice uses the browser's built-in speechSynthesis; audio unlocks on first touch (iOS requirement).
+  - Snowy palette on purpose instead of the site's OLED/green theme — it's kid-facing.
+-->
+<style>
+  :root{
+    --sky:#a9dcf7;
+    --snow:#ffffff;
+    --tray:#eef7fc;
+    --ink:#2f5f80;
+    --pick:#ff6f8f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{touch-action:manipulation}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{
+    display:flex;flex-direction:column;height:100dvh;
+    background:linear-gradient(180deg,#8fd0f2 0%,#cdeaf9 54%,#f1f7fb 56%,#f1f7fb 100%);
+    color:var(--ink);
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  }
+  button{border:0;background:none;cursor:pointer;font:inherit;color:inherit}
+  button:focus-visible{outline:3px solid var(--pick);outline-offset:3px}
+
+  .stage{position:relative;flex:1;min-height:0;touch-action:none}
+  #scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #snowfall{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+  .corner{
+    position:absolute;top:calc(10px + env(safe-area-inset-top));
+    width:52px;height:52px;border-radius:50%;
+    background:rgba(255,255,255,.85);box-shadow:0 3px 10px rgba(40,90,130,.2);
+    display:grid;place-items:center;z-index:5
+  }
+  .corner svg{width:30px;height:30px}
+  #soundBtn{left:74px}
+  #snowBtn{right:12px}
+  #meltBtn{right:74px}
+  .home{left:12px;text-decoration:none}
+
+  .tray{
+    display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;
+    padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+    background:var(--tray);border-radius:24px 24px 0 0;box-shadow:0 -4px 14px rgba(40,90,130,.12);
+    min-height:104px;align-items:center
+  }
+  .tray::-webkit-scrollbar{display:none}
+  .tray.rolling{justify-content:center}
+  .tile{
+    flex:0 0 auto;width:76px;height:76px;border-radius:20px;background:#fff;
+    border:3px solid transparent;display:grid;place-items:center;transition:transform .12s,border-color .12s
+  }
+  .tile svg{width:60px;height:60px;overflow:visible}
+  .tile[aria-pressed="true"]{border-color:var(--pick);background:#fff0f3}
+  .tile:active{transform:scale(.92)}
+  .ball-slot{width:70px;height:70px;display:grid;place-items:center}
+  .ball-slot svg{width:100%;height:100%}
+
+  .sparkle{position:fixed;width:24px;height:24px;pointer-events:none;z-index:100;animation:sparkle .9s ease-out forwards}
+  @keyframes sparkle{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+    30%{opacity:1}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(150deg)}
+  }
+</style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <svg id="scene" viewBox="0 0 400 720" preserveAspectRatio="xMidYMax meet" aria-label="Snowy yard. Roll snowballs to build a snowman.">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8fd0f2"/><stop offset="1" stop-color="#cdeaf9"/>
+        </linearGradient>
+      </defs>
+      <rect x="-200" y="0" width="800" height="420" fill="url(#skyGrad)"/>
+      <path d="M-200,420 Q-60,340 80,390 T300,370 T600,380 V440 H-200 Z" fill="#e3f1f9"/>
+      <g fill="#3f8f6a">
+        <path d="M30,392 L50,340 L70,392 Z M36,366 L50,318 L64,366 Z"/>
+        <path d="M320,388 L345,322 L370,388 Z M328,356 L345,300 L362,356 Z"/>
+        <path d="M372,396 L388,356 L404,396 Z"/>
+      </g>
+      <g fill="#fff">
+        <path d="M44,332 L50,318 L56,332 Z M40,356 L50,340 L60,356 Z"/>
+        <path d="M338,314 L345,300 L352,314 Z M334,340 L345,322 L356,340 Z"/>
+      </g>
+      <path d="M-200,400 Q0,380 200,404 T600,396 V720 H-200 Z" fill="#f1f7fb"/>
+      <ellipse cx="200" cy="614" rx="110" ry="16" fill="#dbe9f2"/>
+      <g id="tracks"></g>
+      <g id="puddle"></g>
+      <g id="snowman">
+        <g id="arms"></g>
+        <g id="balls"></g>
+        <g id="deco"></g>
+      </g>
+      <g id="rolling"></g>
+      <g id="hint"></g>
+    </svg>
+    <canvas id="snowfall" aria-hidden="true"></canvas>
+
+    <a class="corner home" href="../toys.html" aria-label="Back to toys">
+      <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-7 7 7 7"/></svg>
+    </a>
+    <button class="corner" id="soundBtn" aria-label="Sound on" aria-pressed="true">
+      <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10h4l5-4v14l-5-4H4z" fill="#2f7fb0"/>
+        <path id="waves" d="M17 9.5a5 5 0 0 1 0 7M20 7a8.5 8.5 0 0 1 0 12"/>
+        <path id="mute" d="M17 10l6 6M23 10l-6 6" style="display:none"/>
+      </svg>
+    </button>
+    <button class="corner" id="meltBtn" aria-label="Melt and build a new snowman">
+      <svg viewBox="0 0 30 30" aria-hidden="true">
+        <g stroke="#f2b830" stroke-width="2.6" stroke-linecap="round">
+          <path d="M15,2 V6 M15,24 V28 M2,15 H6 M24,15 H28 M5.8,5.8 L8.6,8.6 M21.4,21.4 L24.2,24.2 M5.8,24.2 L8.6,21.4 M21.4,8.6 L24.2,5.8"/>
+        </g>
+        <circle cx="15" cy="15" r="7" fill="#ffd23f"/>
+      </svg>
+    </button>
+    <button class="corner" id="snowBtn" aria-label="Let it snow">
+      <svg viewBox="0 0 30 30" aria-hidden="true" fill="none" stroke="#5aafe6" stroke-width="2.6" stroke-linecap="round">
+        <path d="M15,3 V27 M4.6,9 L25.4,21 M4.6,21 L25.4,9"/>
+        <path d="M11,5 L15,8 L19,5 M11,25 L15,22 L19,25"/>
+      </svg>
+    </button>
+  </main>
+
+  <div class="tray rolling" id="tray" role="group" aria-label="Snowman parts"></div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('scene');
+  const tracksEl = document.getElementById('tracks');
+  const puddleEl = document.getElementById('puddle');
+  const snowmanEl = document.getElementById('snowman');
+  const armsEl = document.getElementById('arms');
+  const ballsEl = document.getElementById('balls');
+  const decoEl = document.getElementById('deco');
+  const rollingEl = document.getElementById('rolling');
+  const hintEl = document.getElementById('hint');
+  const trayEl = document.getElementById('tray');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ================= LAYOUT (scene units) =================
+  const GROUND = 610;
+  const STACK = [
+    { r: 80, cy: GROUND - 80, name: 'Big snowball!' },
+    { r: 58, cy: GROUND - 160 - 58 + 14, name: 'Middle snowball!' },
+    { r: 42, cy: 0, name: 'Snowman head!' }
+  ];
+  STACK[2].cy = STACK[1].cy - 58 - 42 + 10;
+  const HEAD = STACK[2], MID = STACK[1];
+  const ROLL_AREA = { x0: 30, x1: 370, y0: 470, y1: 690 };
+
+  // ================= STATE =================
+  let phase = 'roll';         // roll | lifting | decorate | melting
+  let stacked = 0;
+  let ball = null;            // { x, y, r, angle, tx, ty }
+  let trail = [];
+  let deco = new Set();
+  let busy = false;
+  let soundOn = true;
+  let everRolled = false;
+
+  // ================= DECORATIONS =================
+  const DECOS = [
+    { id: 'eyes', name: 'eyes', group: 'eyes' },
+    { id: 'nose', name: 'carrot nose', group: 'nose' },
+    { id: 'smile', name: 'smile', group: 'smile' },
+    { id: 'buttons', name: 'buttons', group: 'buttons' },
+    { id: 'arms', name: 'stick arms', group: 'arms' },
+    { id: 'scarfRed', name: 'red scarf', group: 'scarf', c: '#E2475B', c2: '#FF8A8A' },
+    { id: 'scarfBlue', name: 'blue scarf', group: 'scarf', c: '#4F8FE8', c2: '#8FD6F2' },
+    { id: 'scarfStripe', name: 'stripy scarf', group: 'scarf', c: '#B58CFF', c2: '#FFD23F', stripes: true },
+    { id: 'tophat', name: 'top hat', group: 'hat' },
+    { id: 'beanie', name: 'pink hat', group: 'hat' },
+    { id: 'earmuffs', name: 'earmuffs', group: 'ears' },
+    { id: 'mittens', name: 'mittens', group: 'mittens' },
+    { id: 'bird', name: 'little bird', group: 'bird' }
+  ];
+  const DECO = Object.fromEntries(DECOS.map((d) => [d.id, d]));
+  const hasGroup = (g) => [...deco].find((id) => DECO[id].group === g);
+
+  // ================= DRAWING HELPERS =================
+  function snowball(cx, cy, r, angle = 0) {
+    const dots = [[-0.4, -0.3], [0.3, -0.45], [0.5, 0.2], [-0.2, 0.45], [0.05, 0.05], [-0.6, 0.15]]
+      .map(([dx, dy]) => `<circle cx="${(cx + dx * r).toFixed(1)}" cy="${(cy + dy * r).toFixed(1)}" r="${Math.max(1.2, r * 0.05).toFixed(1)}" fill="#c9dce8"/>`).join('');
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" stroke="#a9c6d8" stroke-width="3"/>` +
+      `<path d="M${cx + r * 0.2},${cy + r * 0.95} A${r},${r} 0 0 0 ${cx + r * 0.95},${cy + r * 0.2} A${r * 1.1},${r * 1.1} 0 0 1 ${cx + r * 0.2},${cy + r * 0.95} Z" fill="#d4e5f0"/>` +
+      `<ellipse cx="${cx + r * 0.5 - r}" cy="${cy - r * 0.35}" rx="${r * 0.22}" ry="${r * 0.14}" fill="#fff" opacity=".9"/>` +
+      `<g transform="rotate(${angle.toFixed(1)} ${cx} ${cy})">${dots}</g>`;
+  }
+
+  function drawBalls() {
+    let o = '';
+    for (let i = 0; i < stacked; i++) o += snowball(200, STACK[i].cy, STACK[i].r);
+    ballsEl.innerHTML = o;
+  }
+
+  function armsMarkup() {
+    if (!deco.has('arms') && !deco.has('mittens')) return '';
+    const y = MID.cy - 14;
+    let o = `<g id="armL" class="arm"><path d="M${200 - MID.r + 10},${y} L78,${y - 72}" stroke="#7a5236" stroke-width="7" stroke-linecap="round"/>` +
+      `<path d="M104,${y - 44} L88,${y - 62}" stroke="#7a5236" stroke-width="5" stroke-linecap="round"/>`;
+    if (deco.has('mittens')) o += `<ellipse cx="74" cy="${y - 78}" rx="14" ry="12" fill="#FF6F8F"/><ellipse cx="86" cy="${y - 86}" rx="5" ry="7" fill="#FF6F8F" transform="rotate(30 86 ${y - 86})"/><rect x="66" y="${y - 70}" width="18" height="7" rx="3" fill="#fff" transform="rotate(-35 75 ${y - 66})"/>`;
+    o += `</g><g id="armR" class="arm"><path d="M${200 + MID.r - 10},${y} L322,${y - 72}" stroke="#7a5236" stroke-width="7" stroke-linecap="round"/>` +
+      `<path d="M296,${y - 44} L312,${y - 62}" stroke="#7a5236" stroke-width="5" stroke-linecap="round"/>`;
+    if (deco.has('mittens')) o += `<ellipse cx="326" cy="${y - 78}" rx="14" ry="12" fill="#FF6F8F"/><ellipse cx="314" cy="${y - 86}" rx="5" ry="7" fill="#FF6F8F" transform="rotate(-30 314 ${y - 86})"/><rect x="316" y="${y - 70}" width="18" height="7" rx="3" fill="#fff" transform="rotate(35 325 ${y - 66})"/>`;
+    return o + `</g>`;
+  }
+
+  function decoMarkup() {
+    const hy = HEAD.cy, my = MID.cy;
+    let o = '';
+    if (deco.has('buttons')) {
+      [-26, 0, 26].forEach((d) => { o += `<circle cx="200" cy="${my + d}" r="6.5" fill="#2e2a33"/><circle cx="198" cy="${my + d - 2}" r="2" fill="#6b6570"/>`; });
+    }
+    const scarf = hasGroup('scarf');
+    if (scarf) {
+      const s = DECO[scarf];
+      const ny = hy + HEAD.r - 6;
+      o += `<path d="M150,${ny - 6} Q200,${ny + 18} 250,${ny - 6} L250,${ny + 12} Q200,${ny + 36} 150,${ny + 12} Z" fill="${s.c}"/>`;
+      o += `<path d="M222,${ny + 10} L236,${ny + 70} L256,${ny + 64} L240,${ny + 6} Z" fill="${s.c}"/>`;
+      if (s.stripes) {
+        o += `<path d="M168,${ny + 2} L166,${ny + 22} M186,${ny + 8} L184,${ny + 28} M214,${ny + 8} L216,${ny + 28} M232,${ny + 2} L234,${ny + 22} M229,${ny + 28} L247,${ny + 24} M233,${ny + 48} L251,${ny + 44}" stroke="${s.c2}" stroke-width="6"/>`;
+      } else {
+        o += `<path d="M236,${ny + 70} l2,8 M244,${ny + 68} l2,8 M252,${ny + 66} l2,8" stroke="${s.c2}" stroke-width="3" stroke-linecap="round"/>`;
+      }
+    }
+    if (deco.has('eyes')) {
+      o += `<circle cx="185" cy="${hy - 8}" r="6" fill="#2e2a33"/><circle cx="215" cy="${hy - 8}" r="6" fill="#2e2a33"/>` +
+        `<circle cx="187" cy="${hy - 10}" r="2" fill="#fff"/><circle cx="217" cy="${hy - 10}" r="2" fill="#fff"/>`;
+    }
+    if (deco.has('nose')) {
+      o += `<path d="M198,${hy + 1} L240,${hy + 8} L198,${hy + 11} Z" fill="#FF8A3D"/>` +
+        `<path d="M212,${hy + 3} l-2,6 M224,${hy + 5} l-2,4" stroke="#e0661f" stroke-width="1.8" stroke-linecap="round"/>`;
+    }
+    if (deco.has('smile')) {
+      [[-18, 14], [-10, 20], [0, 23], [10, 20], [18, 14]].forEach(([dx, dy]) => { o += `<circle cx="${200 + dx}" cy="${hy + dy}" r="3.2" fill="#2e2a33"/>`; });
+    }
+    if (deco.has('earmuffs')) {
+      o += `<path d="M160,${hy - 4} Q160,${hy - 58} 200,${hy - 58} Q240,${hy - 58} 240,${hy - 4}" stroke="#8fd6f2" stroke-width="7" fill="none"/>` +
+        `<circle cx="158" cy="${hy}" r="15" fill="#FF8FC2"/><circle cx="242" cy="${hy}" r="15" fill="#FF8FC2"/>` +
+        `<circle cx="154" cy="${hy - 4}" r="4" fill="#fff" opacity=".7"/><circle cx="238" cy="${hy - 4}" r="4" fill="#fff" opacity=".7"/>`;
+    }
+    const hat = hasGroup('hat');
+    const headTop = hy - HEAD.r;
+    let birdSpot = null;
+    if (hat === 'tophat') {
+      o += `<rect x="172" y="${headTop - 60}" width="56" height="62" rx="4" fill="#2e2a33"/>` +
+        `<rect x="172" y="${headTop - 18}" width="56" height="11" fill="#E2475B"/>` +
+        `<ellipse cx="200" cy="${headTop + 4}" rx="48" ry="10" fill="#2e2a33"/>` +
+        `<rect x="178" y="${headTop - 56}" width="6" height="30" rx="3" fill="#fff" opacity=".18"/>`;
+      birdSpot = { x: 206, y: headTop - 66 };
+    } else if (hat === 'beanie') {
+      o += `<path d="M158,${headTop + 20} Q158,${headTop - 36} 200,${headTop - 36} Q242,${headTop - 36} 242,${headTop + 20} Z" fill="#FF8FC2"/>` +
+        `<rect x="152" y="${headTop + 8}" width="96" height="18" rx="9" fill="#FF6F8F"/>` +
+        `<path d="M180,${headTop - 28} L180,${headTop + 6} M200,${headTop - 34} L200,${headTop + 6} M220,${headTop - 28} L220,${headTop + 6}" stroke="#ffb3cc" stroke-width="4"/>` +
+        `<circle cx="200" cy="${headTop - 40}" r="14" fill="#fff"/>`;
+      birdSpot = { x: 216, y: headTop - 50 };
+    } else {
+      birdSpot = { x: 210, y: headTop - 4 };
+    }
+    if (deco.has('bird')) {
+      const onArm = deco.has('arms') || deco.has('mittens');
+      const b = onArm ? { x: 300, y: MID.cy - 14 - 62 } : birdSpot;
+      o += `<g id="birdie" transform="translate(${b.x} ${b.y})">` +
+        `<ellipse cx="0" cy="-10" rx="15" ry="11" fill="#5AA9E6"/>` +
+        `<circle cx="9" cy="-19" r="8" fill="#5AA9E6"/>` +
+        `<path d="M16,-19 L24,-17 L16,-15 Z" fill="#FFB02E"/>` +
+        `<circle cx="11" cy="-21" r="1.8" fill="#2e2a33"/>` +
+        `<ellipse cx="3" cy="-6" rx="8" ry="5" fill="#FF8A6B"/>` +
+        `<path d="M-14,-12 L-24,-18 L-20,-8 Z" fill="#3f86c4"/>` +
+        `<path d="M-4,1 l-2,4 M3,1 l2,4" stroke="#FFB02E" stroke-width="2" stroke-linecap="round"/></g>`;
+    }
+    return o;
+  }
+
+  function drawSnowman() {
+    drawBalls();
+    armsEl.innerHTML = phase === 'decorate' ? armsMarkup() : '';
+    decoEl.innerHTML = phase === 'decorate' ? decoMarkup() : '';
+  }
+
+  // ================= TRAY =================
+  const ICONS = {
+    eyes: `<circle cx="36" cy="50" r="10" fill="#2e2a33"/><circle cx="64" cy="50" r="10" fill="#2e2a33"/><circle cx="39" cy="46" r="3" fill="#fff"/><circle cx="67" cy="46" r="3" fill="#fff"/>`,
+    nose: `<path d="M20,44 L86,56 L20,64 Z" fill="#FF8A3D"/><path d="M40,48 l-3,10 M58,51 l-2,8" stroke="#e0661f" stroke-width="3" stroke-linecap="round"/><path d="M20,48 L10,40 M20,54 L8,54 M20,60 L10,68" stroke="#6CBF7C" stroke-width="4" stroke-linecap="round"/>`,
+    smile: [[-30, 40], [-17, 52], [0, 57], [17, 52], [30, 40]].map(([dx, dy]) => `<circle cx="${50 + dx}" cy="${dy}" r="6" fill="#2e2a33"/>`).join(''),
+    buttons: [24, 50, 76].map((y) => `<circle cx="50" cy="${y}" r="10" fill="#2e2a33"/><circle cx="47" cy="${y - 3}" r="3" fill="#6b6570"/>`).join(''),
+    arms: `<path d="M14,86 L86,14" stroke="#7a5236" stroke-width="8" stroke-linecap="round"/><path d="M58,42 L60,18 M40,60 L20,52" stroke="#7a5236" stroke-width="6" stroke-linecap="round"/>`,
+    scarf: (c, c2, stripes) => `<path d="M10,30 Q50,50 90,30 L90,52 Q50,72 10,52 Z" fill="${c}"/><path d="M60,52 L68,94 L84,90 L76,48 Z" fill="${c}"/>` +
+      (stripes ? `<path d="M26,38 L24,58 M44,44 L42,64 M62,74 L78,70" stroke="${c2}" stroke-width="7"/>` : `<path d="M68,94 l1,6 M76,92 l1,6 M84,90 l1,6" stroke="${c2}" stroke-width="3" stroke-linecap="round"/>`),
+    tophat: `<rect x="26" y="10" width="48" height="64" rx="4" fill="#2e2a33"/><rect x="26" y="56" width="48" height="11" fill="#E2475B"/><ellipse cx="50" cy="76" rx="44" ry="10" fill="#2e2a33"/>`,
+    beanie: `<path d="M10,80 Q10,20 50,20 Q90,20 90,80 Z" fill="#FF8FC2"/><rect x="4" y="68" width="92" height="20" rx="10" fill="#FF6F8F"/><circle cx="50" cy="16" r="13" fill="#fff"/>`,
+    earmuffs: `<path d="M22,62 Q22,12 50,12 Q78,12 78,62" stroke="#8fd6f2" stroke-width="8" fill="none"/><circle cx="20" cy="66" r="16" fill="#FF8FC2"/><circle cx="80" cy="66" r="16" fill="#FF8FC2"/>`,
+    mittens: `<path d="M16,80 L16,44 Q16,24 34,24 Q50,24 50,44 L50,80 Z" fill="#FF6F8F"/><ellipse cx="14" cy="52" rx="7" ry="11" fill="#FF6F8F"/><rect x="12" y="74" width="42" height="12" rx="4" fill="#fff"/>` +
+      `<path d="M54,80 L54,44 Q54,24 72,24 Q88,24 88,44 L88,80 Z" fill="#FF6F8F"/><ellipse cx="90" cy="52" rx="7" ry="11" fill="#FF6F8F"/><rect x="50" y="74" width="42" height="12" rx="4" fill="#fff"/>`,
+    bird: `<ellipse cx="44" cy="58" rx="28" ry="21" fill="#5AA9E6"/><circle cx="66" cy="40" r="15" fill="#5AA9E6"/><path d="M79,40 L94,44 L79,48 Z" fill="#FFB02E"/><circle cx="70" cy="36" r="3.2" fill="#2e2a33"/><ellipse cx="54" cy="66" rx="15" ry="9" fill="#FF8A6B"/><path d="M18,52 L2,42 L8,62 Z" fill="#3f86c4"/>`
+  };
+  const iconFor = (d) => {
+    if (d.group === 'scarf') return ICONS.scarf(d.c, d.c2, d.stripes);
+    return ICONS[d.id];
+  };
+
+  function renderTray() {
+    trayEl.innerHTML = '';
+    if (phase === 'roll' || phase === 'lifting') {
+      trayEl.classList.add('rolling');
+      [22, 30, 38].forEach((r, i) => {
+        const done = i < stacked;
+        const div = document.createElement('div');
+        div.className = 'ball-slot';
+        div.setAttribute('aria-hidden', 'true');
+        div.innerHTML = `<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="${r}" fill="${done ? '#ffffff' : 'none'}" stroke="${done ? '#8fd6f2' : '#b9d4e4'}" stroke-width="4" ${done ? '' : 'stroke-dasharray="7 6"'}/></svg>`;
+        trayEl.appendChild(div);
+      });
+      return;
+    }
+    trayEl.classList.remove('rolling');
+    DECOS.forEach((d) => {
+      const b = document.createElement('button');
+      b.className = 'tile';
+      b.setAttribute('aria-label', d.name);
+      b.setAttribute('aria-pressed', String(deco.has(d.id)));
+      b.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${iconFor(d)}</svg>`;
+      b.addEventListener('click', () => toggleDeco(d, b));
+      trayEl.appendChild(b);
+    });
+  }
+
+  function toggleDeco(d, btn) {
+    unlockAudio();
+    if (phase !== 'decorate') return;
+    if (deco.has(d.id)) {
+      deco.delete(d.id);
+      tone(520, 0, 0.2, 0.3, 300);
+    } else {
+      [...deco].forEach((id) => { if (DECO[id].group === d.group) deco.delete(id); });
+      deco.add(d.id);
+      [880, 1175].forEach((f, i) => tone(f, i * 0.06, 0.3, 0.3));
+      say(d.name);
+      const r = svg.getBoundingClientRect();
+      const p = toScreen(200, d.group === 'buttons' || d.group === 'arms' || d.group === 'mittens' ? MID.cy : HEAD.cy);
+      sparkles(p.x, p.y, 6);
+    }
+    const keep = trayEl.scrollLeft;
+    drawSnowman();
+    renderTray();
+    trayEl.scrollLeft = keep;
+  }
+
+  // ================= COORDINATES =================
+  function toScene(clientX, clientY) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const m = svg.getScreenCTM();
+    if (!m) return { x: 0, y: 0 };
+    const p = pt.matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
+  }
+  function toScreen(x, y) {
+    const pt = svg.createSVGPoint();
+    pt.x = x; pt.y = y;
+    const m = svg.getScreenCTM();
+    const p = pt.matrixTransform(m);
+    return { x: p.x, y: p.y };
+  }
+
+  // ================= ROLLING =================
+  function spawnBall() {
+    const side = stacked % 2 === 0 ? 90 : 310;
+    ball = { x: side, y: 660, r: 24, angle: 0, tx: side, ty: 660, growBounce: 0 };
+    trail = [];
+    tracksEl.innerHTML = '';
+    drawRolling();
+    if (!everRolled) showHint();
+  }
+
+  function drawRolling() {
+    if (!ball) { rollingEl.innerHTML = ''; return; }
+    const rr = ball.r * (1 + ball.growBounce * 0.12);
+    rollingEl.innerHTML = snowball(ball.x, ball.y - rr + ball.r * 0.15, rr, ball.angle);
+  }
+
+  function drawTracks() {
+    if (trail.length < 2) return;
+    let d = `M${trail[0].x.toFixed(1)},${trail[0].y.toFixed(1)}`;
+    for (let i = 1; i < trail.length; i++) d += ` L${trail[i].x.toFixed(1)},${trail[i].y.toFixed(1)}`;
+    tracksEl.innerHTML = `<path d="${d}" stroke="#d2e3ee" stroke-width="${Math.max(12, ball ? ball.r * 0.9 : 12)}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;
+  }
+
+  let hintTimer = null;
+  function showHint() {
+    if (!ball) return;
+    hintEl.innerHTML = `<g opacity=".85"><circle cx="${ball.x + 44}" cy="${ball.y - 10}" r="18" fill="#fff" stroke="#8fd6f2" stroke-width="4">` +
+      (reduceMotion ? '' : `<animate attributeName="cx" values="${ball.x + 30};${ball.x + 90};${ball.x + 30}" dur="1.6s" repeatCount="indefinite"/>`) +
+      `</circle></g>`;
+  }
+  const clearHint = () => { hintEl.innerHTML = ''; };
+
+  function growBy(amount) {
+    const target = STACK[stacked].r;
+    ball.r = Math.min(target, ball.r + amount);
+    if (ball.r >= target && phase === 'roll') finishBall();
+  }
+
+  function finishBall() {
+    phase = 'lifting';
+    pointers.clear();
+    [659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => tone(f, i * 0.08, 0.5, 0.3));
+    const p = toScreen(ball.x, ball.y - ball.r);
+    sparkles(p.x, p.y, 12);
+    say(STACK[stacked].name);
+
+    const start = { x: ball.x, y: ball.y - ball.r + ball.r * 0.15 };
+    const end = { x: 200, y: STACK[stacked].cy };
+    const r = ball.r;
+    const t0 = performance.now();
+    const dur = reduceMotion ? 250 : 800;
+    const angle0 = ball.angle;
+    const anim = (ts) => {
+      const t = Math.min(1, (ts - t0) / dur);
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const x = start.x + (end.x - start.x) * e;
+      const y = start.y + (end.y - start.y) * e - Math.sin(t * Math.PI) * 90;
+      rollingEl.innerHTML = snowball(x, y, r, angle0 + t * 120);
+      if (t < 1) { requestAnimationFrame(anim); return; }
+      rollingEl.innerHTML = '';
+      ball = null;
+      stacked++;
+      tracksEl.innerHTML = '';
+      thump();
+      drawSnowman();
+      if (stacked >= 3) {
+        phase = 'decorate';
+        renderTray();
+        [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => tone(f, i * 0.09, 0.6, 0.3));
+        setTimeout(() => say('Now dress up your snowman!'), 500);
+        const sp = toScreen(200, MID.cy);
+        sparkles(sp.x, sp.y, 16);
+      } else {
+        phase = 'roll';
+        renderTray();
+        spawnBall();
+      }
+    };
+    requestAnimationFrame(anim);
+  }
+
+  // ================= INPUT =================
+  const pointers = new Map();
+  const stage = document.getElementById('stage');
+
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.corner')) return;
+    e.preventDefault();
+    unlockAudio();
+    const p = toScene(e.clientX, e.clientY);
+
+    if (phase === 'decorate') {
+      if (Math.abs(p.x - 200) < 110 && p.y > HEAD.cy - HEAD.r - 70 && p.y < GROUND) helloSnowman();
+      return;
+    }
+    if (phase !== 'roll' || !ball) return;
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    everRolled = true;
+    clearHint();
+    pointers.set(e.pointerId, { sx: p.x, sy: p.y, moved: 0, t0: performance.now() });
+    ball.tx = Math.max(ROLL_AREA.x0, Math.min(ROLL_AREA.x1, p.x));
+    ball.ty = Math.max(ROLL_AREA.y0, Math.min(ROLL_AREA.y1, p.y + 20));
+  });
+
+  stage.addEventListener('pointermove', (e) => {
+    const ptr = pointers.get(e.pointerId);
+    if (!ptr || phase !== 'roll' || !ball) return;
+    const p = toScene(e.clientX, e.clientY);
+    ptr.moved = Math.max(ptr.moved, Math.hypot(p.x - ptr.sx, p.y - ptr.sy));
+    ball.tx = Math.max(ROLL_AREA.x0, Math.min(ROLL_AREA.x1, p.x));
+    ball.ty = Math.max(ROLL_AREA.y0, Math.min(ROLL_AREA.y1, p.y + 20));
+  });
+
+  const endPointer = (e) => {
+    const ptr = pointers.get(e.pointerId);
+    pointers.delete(e.pointerId);
+    if (!ptr || phase !== 'roll' || !ball) return;
+    if (ptr.moved < 10 && performance.now() - ptr.t0 < 350) {
+      ball.growBounce = 1;
+      tone(330, 0, 0.12, 0.3, 500);
+      crunch();
+      growBy(STACK[stacked].r * 0.08);
+    }
+  };
+  stage.addEventListener('pointerup', endPointer);
+  stage.addEventListener('pointercancel', endPointer);
+
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  stage.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+  // ================= SNOWMAN ACTIONS =================
+  let helloBusy = false;
+  function helloSnowman() {
+    if (helloBusy) return;
+    helloBusy = true;
+    say('Hello! I love the snow!', { pitch: 0.8, rate: 0.95 });
+    [392, 523.25, 659.25].forEach((f, i) => tone(f, i * 0.1, 0.3, 0.25));
+    const t0 = performance.now();
+    const dur = 1100;
+    const armL = document.getElementById('armL');
+    const armR = document.getElementById('armR');
+    const bird = document.getElementById('birdie');
+    const y = MID.cy - 14;
+    const anim = (ts) => {
+      const t = Math.min(1, (ts - t0) / dur);
+      const w = Math.sin(t * Math.PI * 4) * (1 - t);
+      if (!reduceMotion) {
+        snowmanEl.setAttribute('transform', `rotate(${(w * 4).toFixed(2)} 200 ${GROUND})`);
+        if (armL) armL.setAttribute('transform', `rotate(${(-w * 18).toFixed(1)} ${200 - MID.r + 10} ${y})`);
+        if (armR) armR.setAttribute('transform', `rotate(${(w * 18).toFixed(1)} ${200 + MID.r - 10} ${y})`);
+      }
+      if (t < 1) { requestAnimationFrame(anim); return; }
+      snowmanEl.removeAttribute('transform');
+      if (armL) armL.removeAttribute('transform');
+      if (armR) armR.removeAttribute('transform');
+      helloBusy = false;
+    };
+    requestAnimationFrame(anim);
+    if (bird) {
+      tweet();
+      const p = toScreen(bird.transform.baseVal.consolidate()?.matrix.e ?? 300, (bird.transform.baseVal.consolidate()?.matrix.f ?? 300) - 20);
+      sparkles(p.x, p.y, 4);
+    }
+  }
+
+  function melt() {
+    if (phase === 'melting' || phase === 'lifting') return;
+    unlockAudio();
+    if (stacked === 0 && phase === 'roll') {
+      if (ball) { ball.r = 24; trail = []; tracksEl.innerHTML = ''; drawRolling(); }
+      return;
+    }
+    phase = 'melting';
+    pointers.clear();
+    say("Uh oh, the sun came out! Let's build another one!");
+    const t0 = performance.now();
+    const dur = reduceMotion ? 400 : 2200;
+    const rollR = ball ? ball.r : 0;
+    const anim = (ts) => {
+      const t = Math.min(1, (ts - t0) / dur);
+      const sy = Math.max(0.02, 1 - t);
+      const sx = 1 + t * 0.35;
+      snowmanEl.setAttribute('transform', `translate(200 ${GROUND}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-200 ${-GROUND})`);
+      snowmanEl.setAttribute('opacity', String(1 - t * 0.6));
+      if (ball) { ball.r = Math.max(0, rollR * (1 - t)); drawRolling(); }
+      puddleEl.innerHTML = `<ellipse cx="200" cy="${GROUND + 2}" rx="${(60 + t * 90).toFixed(1)}" ry="${(8 + t * 14).toFixed(1)}" fill="#8fd6f2" opacity="${(0.25 + t * 0.55).toFixed(2)}"/>`;
+      if (t < 1) { requestAnimationFrame(anim); return; }
+      setTimeout(reset, 500);
+    };
+    [784, 659, 523, 392].forEach((f, i) => tone(f, i * 0.25, 0.4, 0.22));
+    requestAnimationFrame(anim);
+  }
+
+  function reset() {
+    snowmanEl.removeAttribute('transform');
+    snowmanEl.removeAttribute('opacity');
+    puddleEl.innerHTML = '';
+    deco.clear();
+    stacked = 0;
+    phase = 'roll';
+    drawSnowman();
+    renderTray();
+    spawnBall();
+  }
+
+  document.getElementById('meltBtn').addEventListener('click', melt);
+
+  // ================= SNOWFALL =================
+  const snowCanvas = document.getElementById('snowfall');
+  const sctx = snowCanvas.getContext('2d');
+  let flakes = [];
+  let heavyUntil = 0;
+  function sizeSnow() {
+    const r = stage.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    snowCanvas.width = Math.round(r.width * dpr);
+    snowCanvas.height = Math.round(r.height * dpr);
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function addFlake(w, h, top) {
+    flakes.push({ x: Math.random() * w, y: top ? -10 : Math.random() * h, r: Math.random() * 2.5 + 1.2, vy: Math.random() * 0.6 + 0.4, sway: Math.random() * Math.PI * 2 });
+  }
+  document.getElementById('snowBtn').addEventListener('click', () => {
+    unlockAudio();
+    heavyUntil = performance.now() + 6000;
+    [1568, 1319, 1175, 1047, 988, 880].forEach((f, i) => tone(f, i * 0.08, 0.5, 0.2));
+    say('Let it snow!');
+  });
+
+  // ================= MAIN LOOP =================
+  let last = performance.now(), lastCrunch = 0;
+  function frame(ts) {
+    const dt = Math.min(50, ts - last) / 1000;
+    last = ts;
+    const f = dt * 60;
+
+    if (phase === 'roll' && ball) {
+      const dx = ball.tx - ball.x, dy = ball.ty - ball.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0.5 && pointers.size) {
+        const step = Math.min(dist, Math.max(2, dist * 0.22) * f);
+        const mx = (dx / dist) * step, my = (dy / dist) * step;
+        ball.x += mx; ball.y += my;
+        ball.angle += (step / Math.max(ball.r, 1)) * 57.3 * Math.sign(mx || 1);
+        trail.push({ x: ball.x, y: ball.y - 2 });
+        if (trail.length > 160) trail.shift();
+        drawTracks();
+        growBy(step * 0.045);
+        if (ts - lastCrunch > 140 && step > 1.5) { crunch(); lastCrunch = ts; }
+      }
+      if (ball) {
+        if (ball.growBounce > 0) ball.growBounce = Math.max(0, ball.growBounce - 0.08 * f);
+        drawRolling();
+      }
+    }
+
+    const r = stage.getBoundingClientRect();
+    const target = reduceMotion ? 20 : (ts < heavyUntil ? 220 : 60);
+    while (flakes.length < target) addFlake(r.width, r.height, flakes.length > 60);
+    sctx.clearRect(0, 0, r.width, r.height);
+    sctx.fillStyle = '#ffffff';
+    for (let i = flakes.length - 1; i >= 0; i--) {
+      const fl = flakes[i];
+      fl.y += fl.vy * f * (ts < heavyUntil ? 1.6 : 1);
+      fl.sway += dt;
+      fl.x += Math.sin(fl.sway) * 0.3 * f;
+      if (fl.y > r.height + 10) {
+        if (flakes.length > target) { flakes.splice(i, 1); continue; }
+        fl.y = -10; fl.x = Math.random() * r.width;
+      }
+      sctx.globalAlpha = 0.85;
+      sctx.beginPath();
+      sctx.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+      sctx.fill();
+    }
+    sctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  // ================= EFFECTS + SOUND =================
+  const starPts = (x, y, r, ri = r * 0.45) => {
+    const p = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? ri : r;
+      p.push((x + Math.cos(a) * rr).toFixed(1) + ',' + (y + Math.sin(a) * rr).toFixed(1));
+    }
+    return p.join(' ');
+  };
+  function sparkles(x, y, n) {
+    const colors = ['#FFD23F', '#ffffff', '#8FD6F2', '#FF8FC2'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'sparkle';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.setProperty('--dx', (Math.random() * 100 - 50) + 'px');
+      el.style.setProperty('--dy', (Math.random() * -80 - 10) + 'px');
+      el.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="${starPts(12, 12, 11, 4)}" fill="${colors[i % colors.length]}" stroke="#bcdcee" stroke-width=".8"/></svg>`;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  let ac = null, master = null, noiseBuf = null;
+  function unlockAudio() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.18;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === 'suspended') ac.resume();
+  }
+  function tone(freq, when = 0, len = 0.4, vol = 0.3, glideTo) {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime + when;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + len);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + len + 0.05);
+  }
+  function noise(len, freq, q, vol, type = 'bandpass') {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ac.createBiquadFilter();
+    f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t, Math.random() * 0.8); src.stop(t + len + 0.05);
+  }
+  const crunch = () => noise(0.09, 1800 + Math.random() * 1500, 1.5, 0.35);
+  const thump = () => { tone(140, 0, 0.25, 0.5, 70); noise(0.2, 400, 0.8, 0.4, 'lowpass'); };
+  const tweet = () => { tone(2600, 0, 0.08, 0.2, 3400); tone(2800, 0.12, 0.08, 0.2, 3600); };
+
+  function say(text, opts = {}) {
+    if (!soundOn || !text || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = opts.rate || 0.9;
+      u.pitch = opts.pitch || 1.2;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    soundOn = !soundOn;
+    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    document.getElementById('waves').style.display = soundOn ? '' : 'none';
+    document.getElementById('mute').style.display = soundOn ? 'none' : '';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    if (soundOn) tone(880, 0, 0.25, 0.3);
+  });
+
+  // ================= START =================
+  window.addEventListener('resize', sizeSnow);
+  sizeSnow();
+  drawSnowman();
+  renderTray();
+  spawnBall();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

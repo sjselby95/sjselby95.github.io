@@ -86,8 +86,9 @@
     display:grid;place-items:center;z-index:7
   }
   .corner svg{width:28px;height:28px}
-  #soundBtn{left:10px}
+  #soundBtn{left:72px}
   #waveBtn{right:10px}
+  .home{left:10px;text-decoration:none}
 
   .bucket{
     position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
@@ -135,6 +136,9 @@
 
   <div class="progress" id="progress" aria-hidden="true"></div>
 
+  <a class="corner home" href="../toys.html" aria-label="Back to toys">
+    <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-7 7 7 7"/></svg>
+  </a>
   <button class="corner" id="soundBtn" aria-label="Sound on" aria-pressed="true">
     <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 10h4l5-4v14l-5-4H4z" fill="#2f7fb0"/>
