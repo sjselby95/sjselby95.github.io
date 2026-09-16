@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3d2a1c">
+<title>Fossil Words</title>
+<!--
+  FOSSIL WORDS — dinosaur reading game for a 6-year-old (1st grade, phone, touch-first)
+
+  Built to push decoding over picture-guessing:
+  - BUILD rounds: the phone says a word. He taps letter bones in order to spell it (with decoy letters mixed in).
+    The picture stays buried until the word is spelled, then it gets dug up as the reward.
+  - READ rounds: a word is printed on a stone tablet with NO audio. He picks the matching fossil picture
+    from three choices that are spelled almost the same (cat / cap / hat), so he has to read every letter.
+    The phone says the word only after he picks correctly.
+  - Rounds alternate BUILD / READ. 10 rounds per level.
+  - Real stakes: 3 bones (lives). A wrong letter, a wrong picture, or running out of time costs a bone.
+    Lose all 3 and it's game over. Score = points + time bonus + streak bonus.
+  - Levels: 1 = short words (cat, dog, bug)  2 = blends (frog, drum, nest)  3 = sh / ch / th / ck (fish, chick, bath).
+    Finishing a level unlocks the next and awards 1–3 stars (bones left). Best scores and stars are saved.
+  - Speaker button replays the word in BUILD rounds (free, no penalty).
+
+  INTEGRATION NOTES (for Claude Code):
+  - This is a GAME. Parent page is /games.html. Add a card for it there, and place the file
+    wherever the other games linked from /games.html already live.
+  - Self-contained: no external fonts, images, audio, or scripts. Pictures are emoji (render as color emoji on iPhone).
+  - Uses localStorage key "fossilWords_v1" for unlocked levels, stars, and best scores (wrapped in try/catch;
+    works fine if storage is blocked, it just won't remember).
+  - The menu screen has no back link. If other games link back to /games.html, a small link on the menu screen
+    only (not during play) fits the layout.
+  - Voice uses the browser's built-in speechSynthesis; audio unlocks on first tap (iOS requirement).
+  - Earthy dig-site palette on purpose instead of the site's OLED/green theme — it's kid-facing.
+-->
+<style>
+  :root{
+    --dirt:#6b4a2f;
+    --dirt-dark:#3d2a1c;
+    --stone:#d8c7a8;
+    --stone-dark:#b39f7c;
+    --bone:#f7efdc;
+    --ink:#3b2a1e;
+    --green:#5bbf6a;
+    --plate:#ff9a4d;
+    --red:#e2475b;
+    --gold:#ffd23f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{touch-action:manipulation}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{
+    background:
+      radial-gradient(circle at 20% 30%,rgba(0,0,0,.12) 0 3px,transparent 4px) 0 0/34px 34px,
+      radial-gradient(circle at 70% 60%,rgba(255,255,255,.06) 0 2px,transparent 3px) 0 0/28px 28px,
+      linear-gradient(180deg,#80583a,var(--dirt) 40%,#553a25);
+    color:var(--bone);
+    font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  }
+  button{border:0;background:none;cursor:pointer;font:inherit;color:inherit}
+  button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+  button:disabled{cursor:default}
+  .screen{position:fixed;inset:0;display:none;flex-direction:column}
+  .screen.on{display:flex}
+
+  /* ---------- menu ---------- */
+  #menu{align-items:center;justify-content:center;gap:14px;padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom))}
+  .title{font-size:40px;font-weight:900;letter-spacing:.5px;color:var(--bone);text-shadow:0 4px 0 var(--dirt-dark);text-align:center;line-height:1}
+  .title small{display:block;font-size:15px;font-weight:700;letter-spacing:2px;color:#e9d7b5;margin-top:6px;text-shadow:none}
+  .mascot{width:190px;height:130px}
+  .levels{display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px}
+  .level{
+    display:flex;align-items:center;gap:14px;width:100%;
+    background:var(--stone);color:var(--ink);border-radius:20px;padding:12px 16px;
+    box-shadow:0 5px 0 var(--stone-dark);transition:transform .1s
+  }
+  .level:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 var(--stone-dark)}
+  .level:disabled{opacity:.55}
+  .level .num{width:46px;height:46px;border-radius:50%;background:var(--dirt-dark);color:var(--bone);display:grid;place-items:center;font-size:24px;font-weight:900;flex:0 0 auto}
+  .level .info{flex:1;text-align:left}
+  .level .name{font-size:22px;font-weight:900}
+  .level .sub{font-size:14px;font-weight:700;opacity:.7}
+  .stars{display:flex;gap:2px}
+  .stars svg{width:22px;height:22px}
+  .corner-sound{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.25);display:grid;place-items:center}
+  .corner-sound svg{width:26px;height:26px}
+
+  /* ---------- game ---------- */
+  #game{padding:calc(8px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))}
+  .hud{display:flex;align-items:center;gap:10px}
+  .hud .home{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.25);display:grid;place-items:center;flex:0 0 auto}
+  .hud .home svg{width:24px;height:24px}
+  .lives{display:flex;gap:4px}
+  .lives svg{width:34px;height:20px;transition:opacity .3s,transform .3s}
+  .lives svg.lost{opacity:.2;transform:scale(.8) rotate(-20deg)}
+  .hud .spacer{flex:1}
+  .score{font-size:22px;font-weight:900;color:var(--gold);text-shadow:0 2px 0 var(--dirt-dark);min-width:64px;text-align:right}
+  .progress{display:flex;gap:4px;margin:8px 2px 6px}
+  .progress i{flex:1;height:8px;border-radius:4px;background:rgba(0,0,0,.28)}
+  .progress i.done{background:var(--gold)}
+  .progress i.now{background:#fff3c4}
+  .timer{height:12px;border-radius:6px;background:rgba(0,0,0,.3);overflow:hidden;margin:0 2px}
+  .timer b{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff9a4d,#ffd23f);border-radius:6px;transform-origin:left}
+  .timer.low b{background:linear-gradient(90deg,#e2475b,#ff7a6b)}
+
+  .board{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:10px}
+  .mode{font-size:14px;font-weight:900;letter-spacing:2px;color:#f0dfbf;opacity:.85;display:flex;align-items:center;gap:8px}
+  .mode .stego{width:44px;height:30px}
+
+  .find{position:relative;width:150px;height:130px;display:grid;place-items:center}
+  .mound{position:absolute;inset:0}
+  .picture{position:relative;font-size:78px;line-height:1;transform:scale(0);transition:transform .45s cubic-bezier(.3,1.7,.5,1)}
+  .find.dug .picture{transform:scale(1)}
+  .find.dug .mound{animation:dig .45s ease-out forwards}
+  @keyframes dig{to{transform:translateY(40px) scale(1.2);opacity:0}}
+
+  .slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .slot{
+    width:56px;height:66px;border-radius:14px;
+    background:rgba(0,0,0,.25);border-bottom:5px solid rgba(0,0,0,.35);
+    display:grid;place-items:center;font-size:42px;font-weight:900;color:var(--bone)
+  }
+  .slot.filled{background:var(--bone);color:var(--ink);border-bottom-color:var(--stone-dark);animation:snap .25s ease-out}
+  @keyframes snap{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+  .slot.next{box-shadow:0 0 0 3px var(--gold)}
+
+  .speak{
+    width:62px;height:62px;border-radius:50%;background:var(--plate);box-shadow:0 5px 0 #c96b27;
+    display:grid;place-items:center;transition:transform .1s
+  }
+  .speak:active{transform:translateY(3px);box-shadow:0 2px 0 #c96b27}
+  .speak svg{width:34px;height:34px}
+
+  .bones{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 10px;max-width:380px;padding:6px 0}
+  .bone{position:relative;width:78px;height:64px;transition:opacity .2s,transform .15s}
+  .bone svg{position:absolute;inset:0;width:100%;height:100%}
+  .bone span{position:relative;font-size:36px;font-weight:900;color:var(--ink);line-height:64px;display:block;text-align:center}
+  .bone:active:not(:disabled){transform:scale(.92)}
+  .bone.used{opacity:0;pointer-events:none;transform:scale(.4)}
+  .bone.bad{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px) rotate(-6deg)}60%{transform:translateX(8px) rotate(6deg)}}
+
+  .tablet{
+    background:var(--stone);color:var(--ink);border-radius:22px;padding:14px 26px;
+    box-shadow:0 6px 0 var(--stone-dark), inset 0 0 0 4px rgba(255,255,255,.35);
+    font-size:62px;font-weight:900;letter-spacing:4px;line-height:1
+  }
+  .choices{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .choice{
+    width:106px;height:112px;border-radius:24px;background:#c9b18a;
+    box-shadow:0 6px 0 #9c845d, inset 0 0 0 4px rgba(255,255,255,.2);
+    display:grid;place-items:center;font-size:58px;transition:transform .12s,opacity .3s
+  }
+  .choice:active:not(:disabled){transform:translateY(3px)}
+  .choice.wrong{opacity:.25;transform:scale(.9) rotate(-6deg)}
+  .choice.right{background:var(--green);box-shadow:0 6px 0 #3e8f4b}
+
+  .feedback{min-height:34px;font-size:24px;font-weight:900;color:var(--gold);text-shadow:0 2px 0 var(--dirt-dark);text-align:center}
+  .feedback.bad{color:#ffb3b3}
+
+  /* ---------- overlay ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(30,20,12,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .overlay.on{display:flex}
+  .card{
+    width:100%;max-width:340px;background:var(--stone);color:var(--ink);border-radius:28px;
+    padding:22px 20px 20px;text-align:center;box-shadow:0 8px 0 var(--stone-dark);animation:rise .4s cubic-bezier(.3,1.5,.5,1)
+  }
+  @keyframes rise{0%{transform:translateY(40px) scale(.9);opacity:0}100%{transform:none;opacity:1}}
+  .card h2{font-size:32px;font-weight:900;line-height:1.1}
+  .card .big-stars{display:flex;justify-content:center;gap:6px;margin:10px 0}
+  .card .big-stars svg{width:52px;height:52px}
+  .card .final{font-size:20px;font-weight:800;margin:6px 0 2px}
+  .card .best{font-size:15px;font-weight:700;opacity:.7}
+  .card .art{width:170px;height:110px;margin:4px auto 0;display:block}
+  .card .btns{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+  .btn{
+    border-radius:18px;padding:14px;font-size:22px;font-weight:900;
+    background:var(--dirt-dark);color:var(--bone);box-shadow:0 5px 0 #20160e;
+    display:flex;align-items:center;justify-content:center;gap:10px
+  }
+  .btn.go{background:var(--green);color:#fff;box-shadow:0 5px 0 #3e8f4b}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #20160e}
+  .btn svg{width:24px;height:24px}
+
+  .sparkle{position:fixed;width:26px;height:26px;pointer-events:none;z-index:60;animation:sparkle .9s ease-out forwards}
+  @keyframes sparkle{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+    30%{opacity:1}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(150deg)}
+  }
+  @media (max-height:680px){
+    .find{width:120px;height:104px}.picture{font-size:62px}
+    .tablet{font-size:50px;padding:10px 20px}
+    .choice{width:94px;height:98px;font-size:50px}
+    .bone{width:70px;height:58px}.bone span{line-height:58px;font-size:32px}
+    .slot{width:50px;height:58px;font-size:36px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .card,.slot.filled,.bone.bad{animation:none}
+  }
+</style>
+</head>
+<body>
+  <!-- MENU -->
+  <section class="screen on" id="menu">
+    <button class="corner-sound" id="soundBtn" aria-label="Sound on" aria-pressed="true">
+      <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#f7efdc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10h4l5-4v14l-5-4H4z" fill="#f7efdc"/>
+        <path class="waves" d="M17 9.5a5 5 0 0 1 0 7M20 7a8.5 8.5 0 0 1 0 12"/>
+        <path class="mute" d="M17 10l6 6M23 10l-6 6" style="display:none"/>
+      </svg>
+    </button>
+    <svg class="mascot" id="menuStego" viewBox="0 0 190 130" aria-hidden="true"></svg>
+    <h1 class="title">Fossil Words<small>DIG · READ · SPELL</small></h1>
+    <div class="levels" id="levels"></div>
+  </section>
+
+  <!-- GAME -->
+  <section class="screen" id="game">
+    <div class="hud">
+      <button class="home" id="homeBtn" aria-label="Back to levels">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="#f7efdc"><path d="M12 3 L2 12 H5 V21 H10 V15 H14 V21 H19 V12 H22 Z"/></svg>
+      </button>
+      <div class="lives" id="lives" aria-label="Bones left"></div>
+      <div class="spacer"></div>
+      <div class="score" id="score" aria-live="polite">0</div>
+    </div>
+    <div class="progress" id="progress" aria-hidden="true"></div>
+    <div class="timer" id="timer" aria-hidden="true"><b id="timerBar"></b></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- OVERLAY -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="card" id="card"></div>
+  </div>
+
+<script>
+(() => {
+  // ================= WORD BANKS =================
+  const LEVELS = [
+    { name: 'Short Words', sub: 'cat · dog · bug', time: 22, words: [
+      ['cat', '🐱'], ['dog', '🐶'], ['pig', '🐷'], ['hen', '🐔'], ['bug', '🐛'], ['sun', '☀️'], ['bat', '🦇'],
+      ['bed', '🛏️'], ['box', '📦'], ['hat', '🎩'], ['map', '🗺️'], ['van', '🚐'], ['fox', '🦊'], ['web', '🕸️'],
+      ['pen', '🖊️'], ['jet', '✈️'], ['bus', '🚌'], ['net', '🥅'], ['pan', '🍳'], ['log', '🪵'], ['pot', '🍲'],
+      ['rat', '🐀'], ['cap', '🧢'], ['bag', '👜'], ['cup', '🥤'], ['six', '6️⃣'], ['ten', '🔟'], ['egg', '🥚']
+    ] },
+    { name: 'Blends', sub: 'frog · drum · nest', time: 26, words: [
+      ['frog', '🐸'], ['crab', '🦀'], ['drum', '🥁'], ['flag', '🚩'], ['sled', '🛷'], ['nest', '🪺'], ['tent', '⛺'],
+      ['milk', '🥛'], ['plant', '🪴'], ['hand', '✋'], ['gift', '🎁'], ['swim', '🏊'], ['skunk', '🦨'], ['clap', '👏'],
+      ['stop', '🛑'], ['mask', '🎭'], ['drip', '💧'], ['belt', '🥋'], ['grin', '😁'], ['plug', '🔌']
+    ] },
+    { name: 'sh · ch · th', sub: 'fish · chick · bath · duck', time: 28, words: [
+      ['fish', '🐟'], ['ship', '🚢'], ['shell', '🐚'], ['chick', '🐥'], ['bath', '🛁'], ['duck', '🦆'], ['sock', '🧦'],
+      ['rock', '🪨'], ['lock', '🔒'], ['brush', '🪥'], ['dish', '🍽️'], ['cash', '💵'], ['lunch', '🍱'], ['chips', '🍟'],
+      ['crash', '💥'], ['trash', '🗑️'], ['check', '✅']
+    ] }
+  ];
+
+  const ROUNDS = 10;
+  const STORE_KEY = 'fossilWords_v1';
+
+  // ================= SAVE DATA =================
+  let save = { unlocked: 1, stars: {}, best: {} };
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) save = { ...save, ...JSON.parse(raw) };
+  } catch (_) {}
+  const persist = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(save)); } catch (_) {} };
+
+  // ================= ART =================
+  function stegoSvg(mood = 'happy') {
+    const eye = mood === 'sad'
+      ? `<path d="M139,54 q4,-3 8,0" stroke="#1f2a1f" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
+      : `<circle cx="143" cy="54" r="4" fill="#1f2a1f"/><circle cx="144.5" cy="52.5" r="1.4" fill="#fff"/>`;
+    const mouth = mood === 'sad'
+      ? `<path d="M150,70 q6,-5 12,0" stroke="#1f2a1f" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+      : `<path d="M148,66 q8,7 16,0" stroke="#1f2a1f" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+    return `<g>
+      <path d="M40,60 L60,30 L72,58 L84,20 L98,56 L112,24 L124,58 L134,40 L140,62 Z" fill="#ff9a4d"/>
+      <path d="M14,78 L2,66 L6,82 Z M14,86 L0,90 L12,94 Z" fill="#e9eadf"/>
+      <path d="M12,86 C30,60 70,50 110,56 C140,60 150,64 158,58 C170,50 182,58 178,72 C174,84 160,84 150,82 C140,96 120,104 96,104 C60,104 30,100 12,86 Z" fill="#5bbf6a"/>
+      <path d="M40,96 C60,104 100,106 130,98 C120,104 108,106 96,106 C70,106 50,102 40,96 Z" fill="#4aa358"/>
+      <rect x="44" y="96" width="16" height="26" rx="7" fill="#4aa358"/><rect x="72" y="98" width="16" height="24" rx="7" fill="#5bbf6a"/>
+      <rect x="104" y="96" width="16" height="26" rx="7" fill="#4aa358"/><rect x="128" y="92" width="16" height="28" rx="7" fill="#5bbf6a"/>
+      <circle cx="66" cy="76" r="4" fill="#4aa358"/><circle cx="92" cy="72" r="5" fill="#4aa358"/><circle cx="116" cy="78" r="3.5" fill="#4aa358"/>
+      ${eye}${mouth}
+      <ellipse cx="160" cy="66" rx="4" ry="2.5" fill="#ff9fb3" opacity=".6"/>
+    </g>`;
+  }
+  const boneSvg = `<svg viewBox="0 0 78 64" aria-hidden="true">
+    <path d="M16,14 C6,4 -2,16 6,24 C-2,32 6,44 16,34 L20,30 L58,30 L62,34 C72,44 80,32 72,24 C80,16 72,4 62,14 L58,18 L20,18 Z" fill="#f7efdc" transform="translate(0 8)"/>
+    <rect x="12" y="14" width="54" height="36" rx="12" fill="#f7efdc"/>
+    <rect x="12" y="44" width="54" height="6" rx="3" fill="#e3d6ba"/>
+  </svg>`;
+  const lifeSvg = (lost) => `<svg viewBox="0 0 34 20" class="${lost ? 'lost' : ''}" aria-hidden="true">
+    <path d="M6,4 C1,-1 -2,6 2,9 C-2,12 1,19 6,14 L9,12 L25,12 L28,14 C33,19 36,12 32,9 C36,6 33,-1 28,4 L25,6 L9,6 Z" fill="#f7efdc" stroke="#3d2a1c" stroke-width="1.2"/>
+  </svg>`;
+  const starSvg = (on) => `<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 14.9,8.6 22,9.2 16.6,14 18.2,21 12,17.3 5.8,21 7.4,14 2,9.2 9.1,8.6" fill="${on ? '#ffd23f' : 'rgba(0,0,0,.18)'}" stroke="${on ? '#e0a91f' : 'none'}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+  const moundSvg = `<svg class="mound" viewBox="0 0 150 130" aria-hidden="true">
+    <ellipse cx="75" cy="112" rx="70" ry="14" fill="rgba(0,0,0,.25)"/>
+    <path d="M8,112 C14,60 44,30 75,30 C106,30 136,60 142,112 Z" fill="#9a6d47"/>
+    <path d="M30,108 C36,74 52,54 75,52 C98,54 114,74 120,108 Z" fill="#b07f55"/>
+    <circle cx="50" cy="86" r="5" fill="#7e5636"/><circle cx="100" cy="78" r="6" fill="#7e5636"/><circle cx="82" cy="98" r="4" fill="#7e5636"/>
+    <text x="75" y="96" text-anchor="middle" font-size="40" font-weight="900" fill="#f7efdc" font-family="ui-rounded,system-ui,sans-serif">?</text>
+  </svg>`;
+  const speakerSvg = `<svg viewBox="0 0 30 30" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h5l6-5v18l-6-5H5z" fill="#fff"/><path d="M20 10.5a6 6 0 0 1 0 9M23.5 7.5a10.5 10.5 0 0 1 0 15"/></svg>`;
+
+  document.getElementById('menuStego').innerHTML = stegoSvg('happy');
+
+  // ================= HELPERS =================
+  const $ = (id) => document.getElementById(id);
+  const shuffle = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  function editDistance(a, b) {
+    const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 1; j <= b.length; j++) dp[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    return dp[a.length][b.length];
+  }
+
+  // ================= MENU =================
+  function renderMenu() {
+    const el = $('levels');
+    el.innerHTML = '';
+    LEVELS.forEach((lv, i) => {
+      const n = i + 1;
+      const locked = n > save.unlocked;
+      const b = document.createElement('button');
+      b.className = 'level';
+      b.disabled = locked;
+      const stars = save.stars[n] || 0;
+      b.setAttribute('aria-label', `Level ${n}, ${lv.name}${locked ? ', locked' : ''}`);
+      b.innerHTML = `<div class="num">${locked ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="#f7efdc"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10 V7 a4 4 0 0 1 8 0 V10" stroke="#f7efdc" stroke-width="2.5" fill="none"/></svg>' : n}</div>
+        <div class="info"><div class="name">${lv.name}</div><div class="sub">${lv.sub}${save.best[n] ? ` · best ${save.best[n]}` : ''}</div></div>
+        <div class="stars">${[1, 2, 3].map((s) => starSvg(s <= stars)).join('')}</div>`;
+      b.addEventListener('click', () => { unlockAudio(); startLevel(n); });
+      el.appendChild(b);
+    });
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id));
+  }
+
+  // ================= GAME STATE =================
+  let G = null;
+  let timerRaf = null;
+  let roundToken = 0;
+  let toldBuild = false, toldRead = false;
+
+  function startLevel(n) {
+    const lv = LEVELS[n - 1];
+    G = {
+      level: n, lv, round: 0, hearts: 3, score: 0, streak: 0,
+      queue: shuffle(lv.words).slice(0, ROUNDS),
+      locked: false
+    };
+    hideOverlay();
+    showScreen('game');
+    renderHud();
+    nextRound();
+  }
+
+  function renderHud() {
+    $('lives').innerHTML = [0, 1, 2].map((i) => lifeSvg(i >= G.hearts)).join('');
+    $('score').textContent = G.score;
+    $('progress').innerHTML = Array.from({ length: ROUNDS }, (_, i) =>
+      `<i class="${i < G.round ? 'done' : i === G.round ? 'now' : ''}"></i>`).join('');
+  }
+
+  // ================= TIMER =================
+  function startTimer(seconds, onExpire) {
+    stopTimer();
+    const bar = $('timerBar');
+    const wrap = $('timer');
+    const t0 = performance.now();
+    const total = seconds * 1000;
+    G.timeLeft = seconds;
+    const tick = (ts) => {
+      const left = Math.max(0, total - (ts - t0));
+      G.timeLeft = left / 1000;
+      bar.style.transform = `scaleX(${left / total})`;
+      wrap.classList.toggle('low', left / total < 0.25);
+      if (left <= 0) { timerRaf = null; onExpire(); return; }
+      timerRaf = requestAnimationFrame(tick);
+    };
+    timerRaf = requestAnimationFrame(tick);
+  }
+  function stopTimer() { if (timerRaf) cancelAnimationFrame(timerRaf); timerRaf = null; }
+
+  // ================= ROUNDS =================
+  function nextRound() {
+    if (G.round >= ROUNDS) { levelComplete(); return; }
+    renderHud();
+    G.locked = false;
+    const [word, pic] = G.queue[G.round];
+    const token = ++roundToken;
+    if (G.round % 2 === 0) buildRound(word, pic, token);
+    else readRound(word, pic, token);
+  }
+
+  function modeLabel(text, mood = 'happy') {
+    return `<div class="mode"><svg class="stego" viewBox="0 0 190 130">${stegoSvg(mood)}</svg>${text}</div>`;
+  }
+
+  // ---------- BUILD: hear it, spell it ----------
+  async function buildRound(word, pic, token) {
+    const board = $('board');
+    const letters = word.split('');
+    const pool = 'abcdefghijklmnoprstuvwy'.split('').filter((c) => !letters.includes(c));
+    const decoyCount = word.length <= 3 ? 3 : 2;
+    const decoys = shuffle(pool).slice(0, decoyCount);
+    const tiles = shuffle([...letters, ...decoys]);
+    let filled = 0;
+
+    board.innerHTML = `
+      ${modeLabel('BUILD IT')}
+      <div class="find" id="find">${moundSvg}<div class="picture">${pic}</div></div>
+      <div class="slots" id="slots">${letters.map((_, i) => `<div class="slot${i === 0 ? ' next' : ''}"></div>`).join('')}</div>
+      <button class="speak" id="speakBtn" aria-label="Hear the word again">${speakerSvg}</button>
+      <div class="bones" id="bones">${tiles.map((c, i) => `<button class="bone" data-i="${i}" data-c="${c}" style="transform:rotate(${Math.round(Math.random() * 16 - 8)}deg)" aria-label="${c}">${boneSvg}<span>${c}</span></button>`).join('')}</div>
+      <div class="feedback" id="feedback"></div>`;
+
+    $('speakBtn').addEventListener('click', () => { unlockAudio(); say(word, 0.8); });
+
+    board.querySelectorAll('.bone').forEach((b) => b.addEventListener('click', () => {
+      if (G.locked || token !== roundToken) return;
+      unlockAudio();
+      const c = b.dataset.c;
+      if (c === letters[filled]) {
+        b.classList.add('used');
+        const slots = $('slots').children;
+        slots[filled].textContent = c;
+        slots[filled].classList.add('filled');
+        slots[filled].classList.remove('next');
+        filled++;
+        if (slots[filled]) slots[filled].classList.add('next');
+        digSound(filled);
+        if (filled === letters.length) {
+          $('find').classList.add('dug');
+          success(word, token, $('find'));
+        }
+      } else {
+        b.classList.remove('bad');
+        void b.offsetWidth;
+        b.classList.add('bad');
+        mistake(word, token, `Not "${c}"`);
+      }
+    }));
+
+    if (!toldBuild) {
+      toldBuild = true;
+      say('Listen to the word. Tap the bones to spell it.');
+      await sleep(2800);
+      if (token !== roundToken) return;
+    }
+    say(word, 0.8);
+    startTimer(G.lv.time + word.length * 2, () => timeUp(word, token));
+  }
+
+  // ---------- READ: read it, pick the picture ----------
+  async function readRound(word, pic, token) {
+    const board = $('board');
+    const others = G.lv.words.filter(([w]) => w !== word);
+    const ranked = shuffle(others).sort((a, b) => editDistance(word, a[0]) - editDistance(word, b[0]));
+    const picks = [];
+    for (const o of ranked) {
+      if (picks.length === 2) break;
+      if (!picks.some((p) => p[1] === o[1])) picks.push(o);
+    }
+    const choices = shuffle([[word, pic], ...picks]);
+
+    board.innerHTML = `
+      ${modeLabel('READ IT')}
+      <div class="tablet" aria-label="Word: ${word}">${word}</div>
+      <div class="choices" id="choices">${choices.map(([w, p]) => `<button class="choice" data-w="${w}" aria-label="picture choice">${p}</button>`).join('')}</div>
+      <div class="feedback" id="feedback"></div>`;
+
+    board.querySelectorAll('.choice').forEach((b) => b.addEventListener('click', () => {
+      if (G.locked || token !== roundToken || b.disabled) return;
+      unlockAudio();
+      if (b.dataset.w === word) {
+        b.classList.add('right');
+        board.querySelectorAll('.choice').forEach((x) => { x.disabled = true; });
+        success(word, token, b);
+      } else {
+        b.classList.add('wrong');
+        b.disabled = true;
+        mistake(word, token, 'Look at every letter!');
+      }
+    }));
+
+    if (!toldRead) {
+      toldRead = true;
+      say('Read the word. Tap the picture that matches.');
+      await sleep(2600);
+      if (token !== roundToken) return;
+    }
+    startTimer(G.lv.time - 4, () => timeUp(word, token));
+  }
+
+  // ---------- outcomes ----------
+  async function success(word, token, el) {
+    G.locked = true;
+    stopTimer();
+    G.streak++;
+    const timeBonus = Math.round(G.timeLeft * 5);
+    const streakBonus = (G.streak - 1) * 25;
+    const gained = 100 + timeBonus + streakBonus;
+    G.score += gained;
+    $('score').textContent = G.score;
+    const fb = $('feedback');
+    fb.classList.remove('bad');
+    fb.textContent = `+${gained}${G.streak >= 3 ? `  🔥${G.streak}` : ''}`;
+    winSound(G.streak);
+    const r = el.getBoundingClientRect();
+    sparkles(r.left + r.width / 2, r.top + r.height / 2, 10);
+    await sleep(350);
+    say(`${word}!`, 0.85);
+    await sleep(1400);
+    if (token !== roundToken) return;
+    G.round++;
+    nextRound();
+  }
+
+  async function mistake(word, token, msg) {
+    G.streak = 0;
+    G.hearts--;
+    renderHud();
+    const fb = $('feedback');
+    fb.classList.add('bad');
+    fb.textContent = msg;
+    crackSound();
+    document.querySelector('.mode .stego').innerHTML = stegoSvg('sad');
+    setTimeout(() => {
+      const s = document.querySelector('.mode .stego');
+      if (s && token === roundToken) s.innerHTML = stegoSvg('happy');
+    }, 900);
+    if (G.hearts <= 0) {
+      G.locked = true;
+      stopTimer();
+      await sleep(700);
+      if (token === roundToken) gameOver(word);
+    }
+  }
+
+  async function timeUp(word, token) {
+    if (token !== roundToken || G.locked) return;
+    G.locked = true;
+    G.streak = 0;
+    G.hearts--;
+    renderHud();
+    crackSound();
+    const fb = $('feedback');
+    fb.classList.add('bad');
+    fb.textContent = `Time's up! It was "${word}"`;
+    const find = $('find');
+    if (find) {
+      $('slots').innerHTML = word.split('').map((c) => `<div class="slot filled">${c}</div>`).join('');
+      find.classList.add('dug');
+    }
+    document.querySelectorAll('.choice').forEach((b) => { b.disabled = true; if (b.dataset.w === word) b.classList.add('right'); });
+    say(`It was ${word}.`, 0.85);
+    await sleep(2200);
+    if (token !== roundToken) return;
+    if (G.hearts <= 0) { gameOver(word); return; }
+    G.round++;
+    nextRound();
+  }
+
+  // ================= END SCREENS =================
+  function showOverlay(html) {
+    $('card').innerHTML = html;
+    $('overlay').classList.add('on');
+  }
+  function hideOverlay() { $('overlay').classList.remove('on'); }
+
+  function levelComplete() {
+    stopTimer();
+    const n = G.level;
+    const stars = Math.max(1, G.hearts);
+    const newBest = G.score > (save.best[n] || 0);
+    save.stars[n] = Math.max(save.stars[n] || 0, stars);
+    if (newBest) save.best[n] = G.score;
+    if (n < LEVELS.length) save.unlocked = Math.max(save.unlocked, n + 1);
+    persist();
+    fanfare();
+    say(stars === 3 ? 'Perfect dig! Three stars!' : 'Level complete!');
+    const hasNext = n < LEVELS.length;
+    showOverlay(`
+      <svg class="art" viewBox="0 0 190 130">${stegoSvg('happy')}</svg>
+      <h2>${stars === 3 ? 'Perfect Dig!' : 'Level Done!'}</h2>
+      <div class="big-stars">${[1, 2, 3].map((s) => starSvg(s <= stars)).join('')}</div>
+      <div class="final">Score: ${G.score}</div>
+      <div class="best">${newBest ? 'New best score!' : `Best: ${save.best[n]}`}</div>
+      <div class="btns">
+        ${hasNext ? `<button class="btn go" id="ovNext">Next Level <svg viewBox="0 0 24 24"><path d="M8 4 L18 12 L8 20 Z" fill="#fff"/></svg></button>` : ''}
+        <button class="btn" id="ovAgain"><svg viewBox="0 0 24 24"><path d="M12 5 V1 L7 6 L12 11 V7 a5 5 0 1 1 -5 5 H5 a7 7 0 1 0 7 -7 Z" fill="#f7efdc"/></svg> Play Again</button>
+        <button class="btn" id="ovHome"><svg viewBox="0 0 24 24"><path d="M12 3 L2 12 H5 V21 H10 V15 H14 V21 H19 V12 H22 Z" fill="#f7efdc"/></svg> Levels</button>
+      </div>`);
+    const r = $('card').getBoundingClientRect();
+    for (let i = 0; i < 4; i++) setTimeout(() => sparkles(r.left + r.width * Math.random(), r.top + 60, 10), i * 180);
+    if (hasNext) $('ovNext').addEventListener('click', () => startLevel(n + 1));
+    $('ovAgain').addEventListener('click', () => startLevel(n));
+    $('ovHome').addEventListener('click', goHome);
+  }
+
+  function gameOver(word) {
+    stopTimer();
+    roundToken++;
+    const n = G.level;
+    const newBest = G.score > (save.best[n] || 0);
+    if (newBest) { save.best[n] = G.score; persist(); }
+    loseSound();
+    say('Out of bones! Try again!');
+    showOverlay(`
+      <svg class="art" viewBox="0 0 190 130">${stegoSvg('sad')}</svg>
+      <h2>Out of Bones!</h2>
+      <div class="final">You dug up ${G.round} of ${ROUNDS} fossils</div>
+      <div class="final">Score: ${G.score}</div>
+      <div class="best">${newBest ? 'New best score!' : `Best: ${save.best[n] || 0}`}</div>
+      <div class="btns">
+        <button class="btn go" id="ovAgain"><svg viewBox="0 0 24 24"><path d="M12 5 V1 L7 6 L12 11 V7 a5 5 0 1 1 -5 5 H5 a7 7 0 1 0 7 -7 Z" fill="#fff"/></svg> Try Again</button>
+        <button class="btn" id="ovHome"><svg viewBox="0 0 24 24"><path d="M12 3 L2 12 H5 V21 H10 V15 H14 V21 H19 V12 H22 Z" fill="#f7efdc"/></svg> Levels</button>
+      </div>`);
+    $('ovAgain').addEventListener('click', () => startLevel(n));
+    $('ovHome').addEventListener('click', goHome);
+  }
+
+  function goHome() {
+    stopTimer();
+    roundToken++;
+    hideOverlay();
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    renderMenu();
+    showScreen('menu');
+  }
+  $('homeBtn').addEventListener('click', goHome);
+
+  // ================= EFFECTS + SOUND =================
+  function sparkles(x, y, n) {
+    const colors = ['#ffd23f', '#ff9a4d', '#f7efdc', '#5bbf6a'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'sparkle';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+      el.style.setProperty('--dy', (Math.random() * -100 - 10) + 'px');
+      el.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="12,1 14.9,8.6 23,9.2 16.6,14 18.2,22 12,17.3 5.8,22 7.4,14 1,9.2 9.1,8.6" fill="${colors[i % colors.length]}"/></svg>`;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  let ac = null, master = null, noiseBuf = null, soundOn = true;
+  function unlockAudio() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.2;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === 'suspended') ac.resume();
+  }
+  function tone(freq, when = 0, len = 0.3, vol = 0.3, glideTo, type = 'sine') {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime + when;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + len);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + len + 0.05);
+  }
+  function noise(len, freq, vol, type = 'lowpass') {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ac.createBiquadFilter();
+    f.type = type; f.frequency.value = freq;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t, Math.random() * 0.5); src.stop(t + len + 0.05);
+  }
+  const digSound = (i) => { noise(0.12, 900, 0.35); tone(440 + i * 110, 0.02, 0.18, 0.3); };
+  const winSound = (streak) => [523.25, 659.25, 783.99].forEach((f, i) => tone(f * (1 + Math.min(streak, 5) * 0.03), i * 0.08, 0.35, 0.3));
+  const crackSound = () => { noise(0.25, 500, 0.6); tone(180, 0, 0.3, 0.35, 90, 'triangle'); };
+  const fanfare = () => [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.12, 0.4, 0.3, null, 'triangle'));
+  const loseSound = () => [392, 349.23, 311.13, 261.63].forEach((f, i) => tone(f, i * 0.18, 0.35, 0.3, null, 'triangle'));
+
+  function say(text, rate = 0.9) {
+    if (!soundOn || !text || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      u.rate = rate;
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  const soundBtn = $('soundBtn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    soundOn = !soundOn;
+    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    soundBtn.querySelector('.waves').style.display = soundOn ? '' : 'none';
+    soundBtn.querySelector('.mute').style.display = soundOn ? 'none' : '';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    if (soundOn) tone(880, 0, 0.2, 0.25);
+  });
+
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  renderMenu();
+})();
+</script>
+</body>
+</html>
