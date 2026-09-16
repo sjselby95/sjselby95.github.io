@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#081630">
+<title>Snowflake Maker</title>
+<!--
+  SNOWFLAKE MAKER — mirror-drawing toy for a 3-year-old (phone, touch-first)
+
+  How it plays:
+  - Anything drawn is repeated 12 ways (6 spokes, each mirrored), so every scribble becomes a snowflake.
+  - Multi-finger drawing works (toddlers use their whole hand).
+  - Soft chime notes while drawing: higher near the center, lower at the edges.
+  - The big snowflake button shrinks the drawing into a falling snowflake in the sky and clears the page.
+    Nothing is ever "deleted", which is why there's no trash button.
+
+  INTEGRATION NOTES (for Claude Code):
+  - Fully self-contained: no external fonts, images, audio, scripts, or storage.
+  - This is a TOY, not a game. Parent page is /toys.html (not /games.html). Add a card for it there,
+    and place the file wherever the other toys linked from /toys.html already live.
+  - There is intentionally no in-page back link (toddler would tap it). If the other toys link back to
+    /toys.html, keep it small and in a top corner, away from the bottom toolbar.
+  - Uses a bright night-sky palette on purpose instead of the site's OLED/green theme — it's kid-facing.
+  - Audio starts on first touch (iOS requirement). Respects prefers-reduced-motion.
+-->
+<style>
+  :root{
+    --night:#081630;
+    --deep:#16306a;
+    --ice:#9fdcff;
+    --snow:#ffffff;
+    --lilac:#c7b3ff;
+    --rose:#ff9fd0;
+    --gold:#ffd66e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:var(--night)}
+  body{
+    touch-action:none;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    overscroll-behavior:none;
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+  }
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #bg{z-index:0;background:radial-gradient(ellipse at 50% 42%,var(--deep) 0%,var(--night) 72%)}
+  #draw{z-index:1}
+  #fx{z-index:2;pointer-events:none}
+
+  .bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:3;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    padding:18px 12px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,rgba(8,22,48,.95) 55%,rgba(8,22,48,0));
+  }
+  .row{display:flex;align-items:center;justify-content:center;gap:12px}
+
+  button{
+    border:0;cursor:pointer;color:#fff;font:inherit;
+    display:grid;place-items:center;
+  }
+  button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+  .swatch{
+    width:46px;height:46px;border-radius:50%;
+    background:var(--c);
+    border:3px solid rgba(255,255,255,.22);
+    transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;
+  }
+  .swatch[aria-pressed="true"]{
+    transform:scale(1.2);border-color:#fff;
+    box-shadow:0 0 16px var(--glow,var(--c));
+  }
+  .swatch.rainbow{
+    background:conic-gradient(#ff9fd0,#ffd66e,#a8ffcf,#9fdcff,#c7b3ff,#ff9fd0);
+    --glow:#fff;
+  }
+
+  .round{
+    width:52px;height:52px;border-radius:50%;
+    background:rgba(159,220,255,.14);
+    border:2px solid rgba(159,220,255,.3);
+  }
+  .round svg{width:26px;height:26px}
+
+  .snow{
+    height:64px;min-width:132px;padding:0 28px;border-radius:32px;
+    background:linear-gradient(180deg,#bfe9ff,#6fbff0);
+    box-shadow:0 0 22px rgba(159,220,255,.55),inset 0 -4px 0 rgba(0,0,0,.12);
+    transition:transform .12s ease;
+  }
+  .snow:active{transform:scale(.94)}
+  .snow svg{width:40px;height:40px}
+
+  @media (max-width:360px){
+    .swatch{width:40px;height:40px}
+    .row{gap:9px}
+  }
+</style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <canvas id="draw" aria-label="Drawing area. Draw to make a snowflake."></canvas>
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <div class="bar">
+    <div class="row" role="group" aria-label="Colors">
+      <button class="swatch" style="--c:var(--ice)"   data-color="#9fdcff" aria-label="Ice blue" aria-pressed="true"></button>
+      <button class="swatch" style="--c:var(--snow)"  data-color="#ffffff" aria-label="White" aria-pressed="false"></button>
+      <button class="swatch" style="--c:var(--lilac)" data-color="#c7b3ff" aria-label="Purple" aria-pressed="false"></button>
+      <button class="swatch" style="--c:var(--rose)"  data-color="#ff9fd0" aria-label="Pink" aria-pressed="false"></button>
+      <button class="swatch" style="--c:var(--gold)"  data-color="#ffd66e" aria-label="Gold" aria-pressed="false"></button>
+      <button class="swatch rainbow" data-color="rainbow" aria-label="Rainbow" aria-pressed="false"></button>
+    </div>
+    <div class="row">
+      <button class="round" id="size" aria-label="Brush size: big">
+        <svg viewBox="0 0 26 26" aria-hidden="true"><circle id="sizeDot" cx="13" cy="13" r="8" fill="#fff"/></svg>
+      </button>
+      <button class="snow" id="snowBtn" aria-label="Make it snow">
+        <svg viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="#0d2a5c" stroke-width="3" stroke-linecap="round">
+          <g transform="translate(20 20)">
+            <g id="arm"><line x1="0" y1="0" x2="0" y2="-16"/><line x1="0" y1="-10" x2="-5" y2="-14"/><line x1="0" y1="-10" x2="5" y2="-14"/></g>
+            <use href="#arm" transform="rotate(60)"/><use href="#arm" transform="rotate(120)"/>
+            <use href="#arm" transform="rotate(180)"/><use href="#arm" transform="rotate(240)"/><use href="#arm" transform="rotate(300)"/>
+          </g>
+        </svg>
+      </button>
+      <button class="round" id="sound" aria-label="Sound on" aria-pressed="true">
+        <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 10h4l5-4v14l-5-4H4z" fill="#fff"/>
+          <path id="waves" d="M17 9.5a5 5 0 0 1 0 7M20 7a8.5 8.5 0 0 1 0 12"/>
+          <path id="mute" d="M17 10l6 6M23 10l-6 6" style="display:none"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const bg = document.getElementById('bg');
+  const draw = document.getElementById('draw');
+  const fx = document.getElementById('fx');
+  const bgx = bg.getContext('2d');
+  const dx = draw.getContext('2d');
+  const fxx = fx.getContext('2d');
+  const bar = document.querySelector('.bar');
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SPOKES = 6;
+  const MAX_PARTICLES = reduceMotion ? 40 : 180;
+  const MAX_FLAKES = 14;
+
+  let W = 0, H = 0, DPR = 1, cx = 0, cy = 0;
+  let color = '#9fdcff', rainbow = false, hue = 200, fat = true, soundOn = true;
+  let hasInk = false, everDrawn = false, inkRadius = 0;
+
+  const pointers = new Map();
+  const particles = [];
+  const flakes = [];
+  let stars = [];
+
+  // ---------- sizing ----------
+  function resize() {
+    const prevW = draw.width, prevH = draw.height;
+    let old = null;
+    if (hasInk && prevW && prevH) {
+      old = document.createElement('canvas');
+      old.width = prevW; old.height = prevH;
+      old.getContext('2d').drawImage(draw, 0, 0);
+    }
+    const oldCx = cx, oldCy = cy;
+
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    for (const c of [bg, draw, fx]) { c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); }
+    for (const x of [bgx, dx, fxx]) x.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    const barH = bar.offsetHeight;
+    cx = W / 2;
+    cy = Math.max((H - barH) / 2, H * 0.3);
+
+    if (old) {
+      dx.save();
+      dx.setTransform(1, 0, 0, 1, 0, 0);
+      const s = (W * DPR) / prevW || 1;
+      dx.drawImage(old, cx * DPR - oldCx * DPR, cy * DPR - oldCy * DPR, prevW * s, prevH * s);
+      dx.restore();
+    }
+
+    stars = Array.from({ length: Math.round((W * H) / 9000) }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.3 + 0.4, p: Math.random() * Math.PI * 2
+    }));
+  }
+
+  // ---------- drawing ----------
+  function nextColor() {
+    if (!rainbow) return color;
+    hue = (hue + 3) % 360;
+    return `hsl(${hue}, 95%, 76%)`;
+  }
+
+  function segment(x0, y0, x1, y1) {
+    const col = nextColor();
+    const w = fat ? 14 : 6;
+    const ax = x0 - cx, ay = y0 - cy, bx = x1 - cx, by = y1 - cy;
+    inkRadius = Math.max(inkRadius, Math.hypot(bx, by) + w * 1.5, Math.hypot(ax, ay) + w * 1.5);
+    hasInk = true;
+    everDrawn = true;
+
+    dx.save();
+    dx.translate(cx, cy);
+    dx.lineCap = 'round';
+    dx.lineJoin = 'round';
+
+    const passes = [
+      { style: col, alpha: 0.2, width: w * 2.6 },  // soft glow
+      { style: col, alpha: 1, width: w },           // body
+      { style: '#ffffff', alpha: 0.55, width: w * 0.35 } // icy core
+    ];
+    for (const pass of passes) {
+      dx.globalAlpha = pass.alpha;
+      dx.strokeStyle = pass.style;
+      dx.lineWidth = pass.width;
+      dx.beginPath();
+      for (let k = 0; k < SPOKES; k++) {
+        const a = (k * Math.PI * 2) / SPOKES, c = Math.cos(a), s = Math.sin(a);
+        dx.moveTo(ax * c - ay * s, ax * s + ay * c);
+        dx.lineTo(bx * c - by * s, bx * s + by * c);
+        dx.moveTo(ax * c + ay * s, ax * s - ay * c);
+        dx.lineTo(bx * c + by * s, bx * s - by * c);
+      }
+      dx.stroke();
+    }
+    dx.restore();
+  }
+
+  function mirrorPoints(x, y) {
+    const px = x - cx, py = y - cy, out = [];
+    for (let k = 0; k < SPOKES; k++) {
+      const a = (k * Math.PI * 2) / SPOKES, c = Math.cos(a), s = Math.sin(a);
+      out.push([cx + px * c - py * s, cy + px * s + py * c]);
+      out.push([cx + px * c + py * s, cy + px * s - py * c]);
+    }
+    return out;
+  }
+
+  // ---------- sparkles ----------
+  function addSparkle(x, y, col, speed = 1) {
+    if (particles.length >= MAX_PARTICLES) particles.shift();
+    const ang = Math.random() * Math.PI * 2;
+    const v = (Math.random() * 40 + 20) * speed;
+    particles.push({
+      x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 10,
+      life: 0, max: Math.random() * 0.5 + 0.5,
+      size: Math.random() * 4 + 3, col
+    });
+  }
+
+  function burst(x, y, n) {
+    for (let i = 0; i < n; i++) addSparkle(x, y, i % 2 ? '#ffffff' : '#9fdcff', 3);
+  }
+
+  // ---------- sound ----------
+  let ac = null, master = null;
+  const notes = [1760, 1567.98, 1318.51, 1174.66, 1046.5, 880, 783.99, 659.25, 587.33, 523.25]; // pentatonic, high -> low
+
+  function unlockAudio() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.16;
+      master.connect(ac.destination);
+    }
+    if (ac.state === 'suspended') ac.resume();
+  }
+
+  function tone(freq, when = 0, len = 0.6, vol = 0.5) {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime + when;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + len + 0.05);
+  }
+
+  function plinkFor(x, y) {
+    const r = Math.hypot(x - cx, y - cy);
+    const maxR = Math.min(W, H) * 0.5;
+    const i = Math.min(notes.length - 1, Math.floor((r / maxR) * notes.length));
+    tone(notes[i]);
+  }
+
+  function snowChime() {
+    [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98].forEach((f, i) => tone(f, i * 0.07, 0.9, 0.4));
+  }
+
+  // ---------- pointer input ----------
+  draw.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    unlockAudio();
+    try { draw.setPointerCapture(e.pointerId); } catch (_) {}
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, travel: 0, lastSound: 0 });
+    segment(e.clientX, e.clientY, e.clientX + 0.01, e.clientY + 0.01);
+    plinkFor(e.clientX, e.clientY);
+    for (const [px, py] of mirrorPoints(e.clientX, e.clientY)) addSparkle(px, py, rainbow ? '#ffffff' : color);
+  });
+
+  draw.addEventListener('pointermove', (e) => {
+    const p = pointers.get(e.pointerId);
+    if (!p) return;
+    let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    if (!evs || !evs.length) evs = [e];
+    for (const ev of evs) {
+      p.travel += Math.hypot(ev.clientX - p.x, ev.clientY - p.y);
+      segment(p.x, p.y, ev.clientX, ev.clientY);
+      p.x = ev.clientX; p.y = ev.clientY;
+    }
+    const pts = mirrorPoints(p.x, p.y);
+    const pick = pts[Math.floor(Math.random() * pts.length)];
+    addSparkle(pick[0], pick[1], rainbow ? `hsl(${hue},95%,80%)` : color);
+
+    const now = performance.now();
+    if (now - p.lastSound > 110 && p.travel > 18) {
+      plinkFor(p.x, p.y);
+      p.lastSound = now;
+      p.travel = 0;
+    }
+  });
+
+  const endPointer = (e) => pointers.delete(e.pointerId);
+  draw.addEventListener('pointerup', endPointer);
+  draw.addEventListener('pointercancel', endPointer);
+  draw.addEventListener('lostpointercapture', endPointer);
+
+  // stop iOS zoom, scroll, pull-to-refresh, long-press menus
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('dblclick', (e) => e.preventDefault());
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+  // ---------- make it snow ----------
+  function letItSnow() {
+    unlockAudio();
+    snowChime();
+    if (!hasInk) { burst(cx, cy, 40); return; }
+
+    const r = Math.min(inkRadius + 10, Math.hypot(W, H));
+    const full = r * 2 * DPR;
+    const S = Math.min(Math.ceil(full), 320);
+    const snap = document.createElement('canvas');
+    snap.width = snap.height = S;
+    const sg = snap.getContext('2d');
+    const sc = S / full;
+    sg.setTransform(sc, 0, 0, sc, 0, 0);
+    sg.drawImage(draw, -(cx - r) * DPR, -(cy - r) * DPR);
+
+    flakes.push({
+      img: snap,
+      x: cx, y: cy,
+      startSize: r * 2,
+      size: r * 2,
+      target: Math.random() * 60 + 70,
+      t: 0,
+      phase: 'shrink',
+      rot: 0,
+      vr: (Math.random() - 0.5) * (reduceMotion ? 0.2 : 0.8),
+      vy: Math.random() * 18 + (reduceMotion ? 8 : 22),
+      sway: Math.random() * Math.PI * 2
+    });
+    if (flakes.length > MAX_FLAKES) flakes.shift();
+
+    dx.save();
+    dx.setTransform(1, 0, 0, 1, 0, 0);
+    dx.clearRect(0, 0, draw.width, draw.height);
+    dx.restore();
+    hasInk = false;
+    inkRadius = 0;
+    burst(cx, cy, 50);
+  }
+
+  // ---------- toolbar ----------
+  const swatches = [...document.querySelectorAll('.swatch')];
+  swatches.forEach((b) => b.addEventListener('click', () => {
+    unlockAudio();
+    swatches.forEach((s) => s.setAttribute('aria-pressed', 'false'));
+    b.setAttribute('aria-pressed', 'true');
+    rainbow = b.dataset.color === 'rainbow';
+    if (!rainbow) color = b.dataset.color;
+    tone(1046.5, 0, 0.25, 0.3);
+  }));
+
+  const sizeBtn = document.getElementById('size');
+  const sizeDot = document.getElementById('sizeDot');
+  sizeBtn.addEventListener('click', () => {
+    unlockAudio();
+    fat = !fat;
+    sizeDot.setAttribute('r', fat ? 8 : 3.5);
+    sizeBtn.setAttribute('aria-label', fat ? 'Brush size: big' : 'Brush size: small');
+    tone(fat ? 659.25 : 1318.51, 0, 0.25, 0.3);
+  });
+
+  const soundBtn = document.getElementById('sound');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    soundOn = !soundOn;
+    document.getElementById('waves').style.display = soundOn ? '' : 'none';
+    document.getElementById('mute').style.display = soundOn ? 'none' : '';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    if (soundOn) tone(880, 0, 0.25, 0.3);
+  });
+
+  document.getElementById('snowBtn').addEventListener('click', letItSnow);
+
+  // ---------- animation loop ----------
+  let last = performance.now();
+  function frame(ts) {
+    const dt = Math.min(50, ts - last) / 1000;
+    last = ts;
+
+    // background: stars, guide spokes, falling snowflakes
+    bgx.clearRect(0, 0, W, H);
+    bgx.fillStyle = '#ffffff';
+    for (const s of stars) {
+      bgx.globalAlpha = reduceMotion ? 0.45 : 0.3 + 0.3 * Math.sin(ts / 900 + s.p);
+      bgx.beginPath();
+      bgx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      bgx.fill();
+    }
+    bgx.globalAlpha = 1;
+
+    const guideLen = Math.min(W, H) * 0.46;
+    bgx.strokeStyle = 'rgba(159,220,255,0.09)';
+    bgx.lineWidth = 2;
+    bgx.beginPath();
+    for (let k = 0; k < SPOKES * 2; k++) {
+      const a = (k * Math.PI) / SPOKES;
+      bgx.moveTo(cx, cy);
+      bgx.lineTo(cx + Math.cos(a) * guideLen, cy + Math.sin(a) * guideLen);
+    }
+    bgx.stroke();
+
+    if (!everDrawn) {
+      const pulse = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(ts / 450);
+      const grad = bgx.createRadialGradient(cx, cy, 0, cx, cy, 40 + pulse * 20);
+      grad.addColorStop(0, 'rgba(191,233,255,0.75)');
+      grad.addColorStop(1, 'rgba(191,233,255,0)');
+      bgx.fillStyle = grad;
+      bgx.beginPath();
+      bgx.arc(cx, cy, 60 + pulse * 20, 0, Math.PI * 2);
+      bgx.fill();
+    }
+
+    for (const f of flakes) {
+      if (f.phase === 'shrink') {
+        f.t = Math.min(1, f.t + dt / (reduceMotion ? 0.3 : 0.8));
+        const e = 1 - Math.pow(1 - f.t, 3);
+        f.size = f.startSize + (f.target - f.startSize) * e;
+        f.rot += dt * 2 * (1 - e);
+        if (f.t >= 1) f.phase = 'fall';
+      } else {
+        f.y += f.vy * dt;
+        f.sway += dt * 0.8;
+        f.x += Math.sin(f.sway) * 12 * dt;
+        f.rot += f.vr * dt;
+        if (f.y - f.size > H) { f.y = -f.size; f.x = Math.random() * W; }
+      }
+      bgx.save();
+      bgx.globalAlpha = 0.9;
+      bgx.translate(f.x, f.y);
+      bgx.rotate(f.rot);
+      bgx.drawImage(f.img, -f.size / 2, -f.size / 2, f.size, f.size);
+      bgx.restore();
+    }
+
+    // sparkles
+    fxx.clearRect(0, 0, W, H);
+    fxx.globalCompositeOperation = 'lighter';
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life += dt;
+      if (p.life >= p.max) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 30 * dt;
+      const k = 1 - p.life / p.max;
+      const s = p.size * k;
+      fxx.globalAlpha = k;
+      fxx.strokeStyle = p.col;
+      fxx.lineWidth = 1.6;
+      fxx.beginPath();
+      fxx.moveTo(p.x - s, p.y); fxx.lineTo(p.x + s, p.y);
+      fxx.moveTo(p.x, p.y - s); fxx.lineTo(p.x, p.y + s);
+      fxx.stroke();
+    }
+    fxx.globalAlpha = 1;
+    fxx.globalCompositeOperation = 'source-over';
+
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

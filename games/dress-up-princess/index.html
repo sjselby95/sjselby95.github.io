@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffe3f1">
+<title>Dress-Up Princess</title>
+<!--
+  DRESS-UP PRINCESS — paper-doll style toy for a 3-year-old (phone, touch-first)
+
+  How it plays:
+  - Big picture tabs along the bottom: dresses, hair (styles + colors), crowns, capes, shoes, magic (wand etc.), skin tone.
+  - Tapping an option dresses the princess, chimes, and says what it is out loud ("pink heart dress").
+  - Tap the princess to make her twirl. The top-right button picks a surprise outfit.
+  - Top-left button turns sound and voice on/off. She blinks every few seconds.
+  - Original character art drawn in inline SVG — not based on any existing princess.
+
+  INTEGRATION NOTES (for Claude Code):
+  - This is a TOY. Parent page is /toys.html. Add a card for it there, and place the file
+    wherever the other toys linked from /toys.html already live.
+  - Fully self-contained: no external fonts, images, audio, scripts, or storage.
+  - No in-page back link on purpose (toddler taps). If the other toys link back to /toys.html,
+    keep it small and away from the bottom panel and the two top corner buttons.
+  - Voice uses the browser's built-in speechSynthesis; audio unlocks on first tap (iOS requirement).
+  - Bright pastel palette on purpose instead of the site's OLED/green theme — it's kid-facing.
+-->
+<style>
+  :root{
+    --sky-top:#ffe3f1;
+    --sky-bottom:#e6dbff;
+    --panel:#fffafd;
+    --tile:#f7effc;
+    --pick:#ff6fae;
+    --ink:#4a3358;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{touch-action:manipulation}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{
+    display:flex;flex-direction:column;height:100dvh;
+    background:linear-gradient(180deg,var(--sky-top),var(--sky-bottom));
+    color:var(--ink);
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  }
+  button{border:0;background:none;cursor:pointer;font:inherit;color:inherit}
+  button:focus-visible{outline:3px solid var(--pick);outline-offset:3px}
+
+  /* ---------- stage ---------- */
+  .stage{position:relative;flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+  .castle{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(120%,560px);height:auto;pointer-events:none}
+  .doll-wrap{position:relative;height:96%;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+  .doll{height:100%;width:auto;max-width:96vw;overflow:visible;display:block}
+  .doll-wrap.twirl{animation:twirl .95s cubic-bezier(.45,.05,.35,1)}
+  .doll.pop{animation:pop .32s ease-out}
+  @keyframes twirl{
+    0%{transform:translateY(0) scaleX(1)}
+    25%{transform:translateY(-14px) scaleX(0)}
+    50%{transform:translateY(-22px) scaleX(-1)}
+    75%{transform:translateY(-14px) scaleX(0)}
+    100%{transform:translateY(0) scaleX(1)}
+  }
+  @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.04)}100%{transform:scale(1)}}
+  .eyes{transform-box:fill-box;transform-origin:center;transition:transform .07s}
+  .doll.blink .eyes{transform:scaleY(.1)}
+
+  .corner{
+    position:absolute;top:calc(10px + env(safe-area-inset-top));
+    width:54px;height:54px;border-radius:50%;
+    background:rgba(255,255,255,.75);
+    box-shadow:0 3px 10px rgba(120,70,160,.18);
+    display:grid;place-items:center;z-index:5;
+  }
+  .corner svg{width:30px;height:30px}
+  #soundBtn{left:12px}
+  #surpriseBtn{right:12px}
+
+  .sparkle{position:absolute;width:26px;height:26px;pointer-events:none;z-index:4;animation:sparkle .9s ease-out forwards}
+  @keyframes sparkle{
+    0%{opacity:0;transform:translate(0,0) scale(.2) rotate(0)}
+    30%{opacity:1}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.1) rotate(160deg)}
+  }
+
+  /* ---------- panel ---------- */
+  .panel{
+    background:var(--panel);
+    border-radius:26px 26px 0 0;
+    box-shadow:0 -6px 20px rgba(120,70,160,.15);
+    padding:12px 0 calc(12px + env(safe-area-inset-bottom));
+  }
+  .tabs,.options{display:flex;overflow-x:auto;scrollbar-width:none;touch-action:pan-x}
+  .tabs::-webkit-scrollbar,.options::-webkit-scrollbar{display:none}
+  .tabs{gap:6px;padding:0 12px 10px;justify-content:safe center}
+  .tab{
+    flex:0 0 auto;width:44px;height:44px;border-radius:50%;
+    background:var(--tile);border:3px solid transparent;
+    display:grid;place-items:center;overflow:hidden;
+    transition:transform .15s,border-color .15s,background .15s;
+  }
+  .tab svg{width:34px;height:34px}
+  .tab[aria-pressed="true"]{border-color:var(--pick);background:#fff0f7;transform:scale(1.1)}
+
+  .options{gap:10px;padding:4px 14px 4px;scroll-snap-type:x proximity}
+  .opt{
+    flex:0 0 auto;width:86px;height:86px;border-radius:22px;
+    background:var(--tile);border:3px solid transparent;
+    display:grid;place-items:center;scroll-snap-align:start;
+    transition:transform .15s,border-color .15s,background .15s;
+  }
+  .opt svg{width:70px;height:70px}
+  .opt[aria-pressed="true"]{border-color:var(--pick);background:#fff0f7;transform:scale(1.06)}
+  .opt:active{transform:scale(.94)}
+
+  @media (prefers-reduced-motion: reduce){
+    .doll-wrap.twirl,.doll.pop{animation:none}
+    .sparkle{animation-duration:.5s}
+  }
+</style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <svg class="castle" viewBox="0 0 400 210" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
+      <g fill="#ffffff" opacity=".6">
+        <rect x="52" y="92" width="52" height="118"/><polygon points="46,94 78,34 110,94"/>
+        <rect x="296" y="92" width="52" height="118"/><polygon points="290,94 322,34 354,94"/>
+        <rect x="100" y="122" width="200" height="88"/>
+        <rect x="166" y="64" width="68" height="146"/><polygon points="158,66 200,2 242,66"/>
+      </g>
+      <g fill="#e6dbff" opacity=".9">
+        <rect x="190" y="160" width="20" height="50" rx="10"/>
+        <rect x="70" y="120" width="14" height="22" rx="7"/><rect x="314" y="120" width="14" height="22" rx="7"/>
+        <rect x="193" y="92" width="14" height="22" rx="7"/>
+      </g>
+    </svg>
+
+    <button class="corner" id="soundBtn" aria-label="Sound on" aria-pressed="true">
+      <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#b05b93" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10h4l5-4v14l-5-4H4z" fill="#b05b93"/>
+        <path id="waves" d="M17 9.5a5 5 0 0 1 0 7M20 7a8.5 8.5 0 0 1 0 12"/>
+        <path id="mute" d="M17 10l6 6M23 10l-6 6" style="display:none"/>
+      </svg>
+    </button>
+    <button class="corner" id="surpriseBtn" aria-label="Surprise outfit">
+      <svg viewBox="0 0 30 30" aria-hidden="true">
+        <polygon points="15,2 18.5,11 28,11.5 20.5,17.5 23,27 15,21.5 7,27 9.5,17.5 2,11.5 11.5,11" fill="#ffcf4d" stroke="#e0a91f" stroke-width="1.5" stroke-linejoin="round"/>
+        <circle cx="12" cy="14" r="1.6" fill="#b05b93"/><circle cx="18" cy="14" r="1.6" fill="#b05b93"/>
+        <path d="M12 18q3 2.5 6 0" stroke="#b05b93" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <div class="doll-wrap" id="dollWrap" role="button" tabindex="0" aria-label="Princess. Tap to twirl.">
+      <svg class="doll" id="doll" viewBox="0 0 300 440" aria-hidden="true"></svg>
+    </div>
+  </main>
+
+  <section class="panel">
+    <div class="tabs" id="tabs" role="group" aria-label="What to change"></div>
+    <div class="options" id="options" role="group" aria-label="Choices"></div>
+  </section>
+
+<script>
+(() => {
+  // ================= DATA =================
+  const SKIN = [
+    { c: '#FFE3D1', blush: '#FF9FB3' },
+    { c: '#F5C9A6', blush: '#F28C9A' },
+    { c: '#DDA37A', blush: '#E07A7A' },
+    { c: '#B47650', blush: '#C9606A' },
+    { c: '#7E4E30', blush: '#B5505E' }
+  ];
+  const HAIR_COLORS = [
+    { name: 'yellow hair', c: '#F4C542', d: '#D29B1E' },
+    { name: 'light yellow hair', c: '#F6E2A0', d: '#DDBF6A' },
+    { name: 'brown hair', c: '#8B5A2B', d: '#673F1B' },
+    { name: 'black hair', c: '#2E2436', d: '#1A1320' },
+    { name: 'red hair', c: '#D65A2E', d: '#AD401C' },
+    { name: 'purple hair', c: '#C49CF2', d: '#9A70D2' }
+  ];
+  const HAIR_STYLES = [
+    { name: 'long hair', id: 'long' },
+    { name: 'hair buns', id: 'buns' },
+    { name: 'curly hair', id: 'curls' },
+    { name: 'short hair', id: 'bob' }
+  ];
+  const DRESSES = [
+    { name: 'pink heart dress', shape: 'gown', main: '#FF8FC2', light: '#FFC7E1', dark: '#E0609E', deco: 'heart', decoC: '#ffffff' },
+    { name: 'sparkly blue dress', shape: 'gown', main: '#8FD3FF', light: '#D6F0FF', dark: '#5AAFE6', deco: 'star', decoC: '#ffffff' },
+    { name: 'purple tutu', shape: 'tutu', main: '#B58CFF', light: '#DCC8FF', dark: '#8C60E0', deco: 'dot', decoC: '#ffffff' },
+    { name: 'golden dress', shape: 'gown', main: '#FFCF4D', light: '#FFE9A6', dark: '#E0A91F', deco: 'dot', decoC: '#FFF6D6' },
+    { name: 'green ruffle dress', shape: 'tiered', main: '#7FE0B5', light: '#C4F5DD', dark: '#4FBF8F', tiers: ['#7FE0B5', '#A8EDCB', '#7FE0B5'] },
+    { name: 'red star tutu', shape: 'tutu', main: '#FF6B6B', light: '#FFB3B3', dark: '#D94848', deco: 'star', decoC: '#FFE08A' },
+    { name: 'rainbow dress', shape: 'tiered', main: '#FF8FC2', light: '#FFC7E1', dark: '#E0609E', tiers: ['#FF8FC2', '#FFD66E', '#8FD3FF', '#B58CFF'] },
+    { name: 'night sky dress', shape: 'gown', main: '#3B3F9E', light: '#6D72D6', dark: '#262A75', deco: 'moon', decoC: '#FFE08A' }
+  ];
+  const CROWNS = [
+    { name: 'no crown', id: 'none' },
+    { name: 'sparkly tiara', id: 'tiara' },
+    { name: 'big gold crown', id: 'tall' },
+    { name: 'flower crown', id: 'flowers' },
+    { name: 'star headband', id: 'star' },
+    { name: 'big bow', id: 'bow' }
+  ];
+  const CAPES = [
+    { name: 'no cape', id: 'none' },
+    { name: 'red cape', c: '#E2475B', trim: '#FFD66E' },
+    { name: 'purple star cape', c: '#8C60E0', trim: '#FFFFFF', stars: true },
+    { name: 'pink cape', c: '#FF9FD0', trim: '#FFFFFF' },
+    { name: 'blue cape', c: '#5AAFE6', trim: '#D6F0FF' },
+    { name: 'rainbow cape', rainbow: true }
+  ];
+  const SHOES = [
+    { name: 'pink shoes', type: 'slipper', c: '#FF8FC2', bow: '#FFFFFF' },
+    { name: 'glass slippers', type: 'glass' },
+    { name: 'gold shoes', type: 'slipper', c: '#FFCF4D', bow: '#FF6B9A' },
+    { name: 'red boots', type: 'boot', c: '#E2475B' },
+    { name: 'purple sparkle shoes', type: 'slipper', c: '#B58CFF', bow: '#FFE08A', sparkle: true },
+    { name: 'yellow rain boots', type: 'boot', c: '#FFD23F' }
+  ];
+  const HAND = [
+    { name: 'empty hands', id: 'none' },
+    { name: 'magic wand', id: 'wand' },
+    { name: 'flowers', id: 'flowers' },
+    { name: 'balloon', id: 'balloon' },
+    { name: 'heart purse', id: 'purse' }
+  ];
+
+  const state = { dress: 0, hairStyle: 0, hairColor: 0, skin: 0, crown: 1, cape: 0, shoes: 0, hand: 1 };
+
+  // ================= SVG HELPERS =================
+  let uid = 0;
+  const starPts = (x, y, r, ri = r * 0.45) => {
+    const p = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? ri : r;
+      p.push((x + Math.cos(a) * rr).toFixed(1) + ',' + (y + Math.sin(a) * rr).toFixed(1));
+    }
+    return p.join(' ');
+  };
+  const heartD = (x, y, r) =>
+    `M${x},${y + r} C${x - r * 1.7},${y - r * 0.1} ${x - r * 0.7},${y - r * 1.4} ${x},${y - r * 0.4} C${x + r * 0.7},${y - r * 1.4} ${x + r * 1.7},${y - r * 0.1} ${x},${y + r} Z`;
+  const flower = (x, y, r, petal, center = '#FFD66E') => {
+    let o = '';
+    for (let i = 0; i < 5; i++) {
+      const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+      o += `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${r * 0.85}" fill="${petal}"/>`;
+    }
+    return o + `<circle cx="${x}" cy="${y}" r="${r * 0.6}" fill="${center}"/>`;
+  };
+  const noneIcon = `<circle cx="50" cy="50" r="30" fill="none" stroke="#d6c3e3" stroke-width="7"/><line x1="29" y1="71" x2="71" y2="29" stroke="#d6c3e3" stroke-width="7" stroke-linecap="round"/>`;
+
+  // ================= PARTS =================
+  function capeBack(s) {
+    const c = CAPES[s.cape];
+    if (c.id === 'none') return '';
+    const shape = (w) => `M120,192 Q150,184 180,192 L${150 + w},405 Q150,425 ${150 - w},405 Z`;
+    if (c.rainbow) {
+      return ['#FF6B6B', '#FFA94D', '#FFD66E', '#7FE0B5', '#8FD3FF', '#B58CFF']
+        .map((col, i) => `<path d="${shape(120 - i * 13)}" fill="${col}"/>`).join('');
+    }
+    let o = `<path d="${shape(120)}" fill="${c.c}"/>`;
+    o += `<path d="M140,196 L96,410 M160,196 L204,410" stroke="rgba(0,0,0,.12)" stroke-width="3" fill="none"/>`;
+    o += `<path d="M30,405 Q150,425 270,405" fill="none" stroke="${c.trim}" stroke-width="7" stroke-linecap="round"/>`;
+    if (c.stars) {
+      [[58, 385], [242, 385], [82, 330], [218, 330], [104, 270], [196, 270]]
+        .forEach(([x, y]) => { o += `<polygon points="${starPts(x, y, 8)}" fill="${c.trim}"/>`; });
+    }
+    return o;
+  }
+
+  function capeFront(s) {
+    const c = CAPES[s.cape];
+    if (c.id === 'none') return '';
+    const tie = c.rainbow ? '#B58CFF' : c.c;
+    return `<path d="M124,194 L150,207 L176,194" stroke="${tie}" stroke-width="5" fill="none" stroke-linecap="round"/>` +
+      `<circle cx="150" cy="207" r="6.5" fill="#FFD66E" stroke="#fff" stroke-width="2"/>`;
+  }
+
+  function hairBack(s) {
+    const h = HAIR_COLORS[s.hairColor], st = HAIR_STYLES[s.hairStyle].id;
+    if (st === 'long') {
+      return `<path d="M90,120 C84,60 118,40 150,40 C182,40 216,60 210,120 C214,170 222,220 218,262 Q208,278 196,266 Q186,278 176,262 L124,262 Q114,278 104,266 Q92,278 82,262 C78,220 86,170 90,120 Z" fill="${h.c}"/>` +
+        `<path d="M100,190 Q94,226 102,256 M200,190 Q206,226 198,256" stroke="${h.d}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".55"/>`;
+    }
+    if (st === 'buns') {
+      return `<ellipse cx="150" cy="118" rx="61" ry="64" fill="${h.c}"/>` +
+        `<circle cx="96" cy="70" r="28" fill="${h.c}"/><circle cx="204" cy="70" r="28" fill="${h.c}"/>` +
+        `<path d="M84,70 a12,12 0 1 1 12,12 M216,70 a12,12 0 1 0 -12,12" stroke="${h.d}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".55"/>`;
+    }
+    if (st === 'curls') {
+      let o = `<ellipse cx="150" cy="122" rx="64" ry="66" fill="${h.c}"/>`;
+      [[94, 150], [98, 186], [114, 212], [206, 150], [202, 186], [186, 212], [90, 112], [210, 112], [104, 72], [150, 56], [196, 72]]
+        .forEach(([x, y]) => { o += `<circle cx="${x}" cy="${y}" r="24" fill="${h.c}"/>`; });
+      [[98, 186], [202, 186], [114, 212], [186, 212]]
+        .forEach(([x, y]) => { o += `<path d="M${x - 8},${y} a8,8 0 1 1 8,8" stroke="${h.d}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".5"/>`; });
+      return o;
+    }
+    // bob
+    return `<path d="M88,122 C84,62 118,42 150,42 C182,42 216,62 212,122 L216,184 Q183,196 150,188 Q117,196 84,184 Z" fill="${h.c}"/>`;
+  }
+
+  function hairFront(s) {
+    const h = HAIR_COLORS[s.hairColor];
+    return `<path d="M92,124 C88,72 118,52 150,52 C182,52 212,72 208,124 C204,108 194,96 180,94 C170,104 160,100 150,92 C140,100 130,104 120,94 C106,96 96,108 92,124 Z" fill="${h.c}"/>` +
+      `<path d="M116,70 Q138,58 164,62" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".35"/>`;
+  }
+
+  const neck = (s) => `<rect x="141" y="165" width="18" height="32" rx="7" fill="${SKIN[s.skin].c}"/>`;
+  const head = (s) => `<ellipse cx="150" cy="122" rx="56" ry="58" fill="${SKIN[s.skin].c}"/>`;
+
+  function face(s) {
+    const sk = SKIN[s.skin];
+    return `<g class="eyes">` +
+      `<ellipse cx="128" cy="130" rx="6.5" ry="8.5" fill="#3a2a3f"/><ellipse cx="172" cy="130" rx="6.5" ry="8.5" fill="#3a2a3f"/>` +
+      `<circle cx="130.5" cy="126.5" r="2.3" fill="#fff"/><circle cx="174.5" cy="126.5" r="2.3" fill="#fff"/>` +
+      `<path d="M121.5,124 l-5,-3.5 M178.5,124 l5,-3.5" stroke="#3a2a3f" stroke-width="2.2" stroke-linecap="round"/>` +
+      `</g>` +
+      `<ellipse cx="115" cy="148" rx="10" ry="6" fill="${sk.blush}" opacity=".45"/>` +
+      `<ellipse cx="185" cy="148" rx="10" ry="6" fill="${sk.blush}" opacity=".45"/>` +
+      `<path d="M139,152 Q150,163 161,152" stroke="#b0506a" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  }
+
+  function legs(s) {
+    const c = SKIN[s.skin].c;
+    return `<rect x="131" y="320" width="12" height="100" rx="6" fill="${c}"/><rect x="157" y="320" width="12" height="100" rx="6" fill="${c}"/>`;
+  }
+
+  function arms(s) {
+    const c = SKIN[s.skin].c;
+    return `<path d="M122,200 Q104,236 100,272 M178,200 Q196,236 200,272" stroke="${c}" stroke-width="15" fill="none" stroke-linecap="round"/>`;
+  }
+  const hands = (s) => {
+    const c = SKIN[s.skin].c;
+    return `<circle cx="100" cy="275" r="9.5" fill="${c}"/><circle cx="200" cy="275" r="9.5" fill="${c}"/>`;
+  };
+
+  function decoEl(type, x, y, col, bg) {
+    if (type === 'heart') return `<path d="${heartD(x, y, 6.5)}" fill="${col}"/>`;
+    if (type === 'star') return `<polygon points="${starPts(x, y, 8)}" fill="${col}"/>`;
+    if (type === 'moon') return `<circle cx="${x}" cy="${y}" r="7" fill="${col}"/><circle cx="${x + 3.6}" cy="${y - 2.6}" r="6" fill="${bg}"/>`;
+    return `<circle cx="${x}" cy="${y}" r="4.5" fill="${col}"/>`;
+  }
+
+  function skirt(s) {
+    const d = DRESSES[s.dress];
+    const id = 'sk' + (uid++);
+    let o = '';
+    let path;
+    if (d.shape === 'tutu') {
+      o += `<path d="M128,252 C210,270 238,305 232,334 Q150,354 68,334 C62,305 90,270 128,252 Z" fill="${d.light}"/>`;
+      path = 'M128,250 Q150,258 172,250 C204,268 226,298 222,325 Q150,345 78,325 C74,298 96,268 128,250 Z';
+    } else {
+      path = 'M128,250 Q150,258 172,250 C196,300 236,350 246,395 Q150,420 54,395 C64,350 104,300 128,250 Z';
+    }
+    o += `<defs><clipPath id="${id}"><path d="${path}"/></clipPath></defs>`;
+    o += `<path d="${path}" fill="${d.main}"/>`;
+    o += `<g clip-path="url(#${id})">`;
+
+    if (d.shape === 'tiered') {
+      const n = d.tiers.length;
+      for (let k = 1; k < n; k++) {
+        const y = 290 + ((k - 1) * 95) / (n - 1);
+        const col = d.tiers[k];
+        o += `<path d="M0,${y} Q150,${y + 16} 300,${y} L300,440 L0,440 Z" fill="${col}"/>`;
+        for (let i = 0; i <= 24; i++) {
+          const t = i / 24;
+          o += `<circle cx="${(300 * t).toFixed(1)}" cy="${(y + 32 * t * (1 - t)).toFixed(1)}" r="8" fill="${col}"/>`;
+        }
+      }
+    }
+
+    if (d.deco) {
+      const spots = d.shape === 'tutu'
+        ? [[108, 298], [150, 286], [192, 298], [128, 318], [172, 318], [90, 318], [210, 318]]
+        : [[112, 318], [150, 298], [188, 318], [92, 362], [132, 352], [168, 352], [208, 362], [150, 390], [72, 392], [228, 392]];
+      spots.forEach(([x, y]) => { o += decoEl(d.deco, x, y, d.decoC, d.main); });
+    }
+
+    const foldBottom = d.shape === 'tutu' ? 345 : 420;
+    o += `<path d="M140,258 Q124,330 104,${foldBottom} M160,258 Q176,330 196,${foldBottom}" stroke="${d.dark}" stroke-width="3" fill="none" opacity=".25"/>`;
+    o += `<ellipse cx="112" cy="${d.shape === 'tutu' ? 290 : 330}" rx="16" ry="${d.shape === 'tutu' ? 26 : 60}" fill="#fff" opacity=".18" transform="rotate(18 112 330)"/>`;
+    o += `</g>`;
+
+    if (d.shape === 'tutu') {
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12;
+        const x = 78 * (1 - t) * (1 - t) + 2 * (1 - t) * t * 150 + t * t * 222;
+        const y = 325 * (1 - t) * (1 - t) + 2 * (1 - t) * t * 345 + t * t * 325;
+        o += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" fill="${d.main}"/>`;
+      }
+    }
+    return o;
+  }
+
+  function bodice(s) {
+    const d = DRESSES[s.dress];
+    return `<path d="M124,190 Q150,182 176,190 L172,252 Q150,258 128,252 Z" fill="${d.main}"/>` +
+      `<path d="M126,194 Q150,208 174,194" stroke="${d.light}" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+      `<rect x="124" y="243" width="52" height="14" rx="7" fill="${d.dark}"/>` +
+      `<ellipse cx="141" cy="250" rx="9" ry="6" fill="${d.light}"/><ellipse cx="159" cy="250" rx="9" ry="6" fill="${d.light}"/>` +
+      `<circle cx="150" cy="250" r="5" fill="${d.dark}" stroke="${d.light}" stroke-width="2"/>`;
+  }
+
+  function sleeves(s) {
+    const d = DRESSES[s.dress];
+    return `<ellipse cx="121" cy="199" rx="15" ry="12" fill="${d.light}"/><ellipse cx="179" cy="199" rx="15" ry="12" fill="${d.light}"/>`;
+  }
+
+  function shoes(s) {
+    const sh = SHOES[s.shoes];
+    let o = '';
+    [[132, 1], [168, -1]].forEach(([cx, dir]) => {
+      if (sh.type === 'glass') {
+        o += `<ellipse cx="${cx}" cy="421" rx="17" ry="9" fill="#E6F7FF" stroke="#9FD3F0" stroke-width="2" opacity=".95"/>`;
+        o += `<polygon points="${starPts(cx - 6 * dir, 418, 4)}" fill="#fff"/>`;
+      } else if (sh.type === 'boot') {
+        o += `<rect x="${cx + 3 * dir - 8}" y="394" width="16" height="28" rx="4" fill="${sh.c}"/>`;
+        o += `<ellipse cx="${cx}" cy="421" rx="16" ry="8" fill="${sh.c}"/>`;
+        o += `<rect x="${cx + 3 * dir - 9}" y="392" width="18" height="6" rx="3" fill="#fff" opacity=".45"/>`;
+      } else {
+        o += `<ellipse cx="${cx}" cy="421" rx="17" ry="9" fill="${sh.c}"/>`;
+        o += `<ellipse cx="${cx - 6 * dir}" cy="418" rx="6" ry="3" fill="#fff" opacity=".35"/>`;
+        o += `<circle cx="${cx + 5 * dir}" cy="414" r="4.5" fill="${sh.bow}"/>`;
+        if (sh.sparkle) o += `<polygon points="${starPts(cx - 8 * dir, 424, 3.5)}" fill="#fff"/>`;
+      }
+    });
+    return o;
+  }
+
+  function crown(s) {
+    const id = CROWNS[s.crown].id;
+    if (id === 'tiara') {
+      return `<path d="M114,66 L124,44 L136,58 L150,32 L164,58 L176,44 L186,66 Q150,54 114,66 Z" fill="#FFD66E" stroke="#E0A91F" stroke-width="2" stroke-linejoin="round"/>` +
+        `<circle cx="150" cy="47" r="5" fill="#FF6B9A"/><circle cx="125" cy="54" r="3" fill="#8FD3FF"/><circle cx="175" cy="54" r="3" fill="#8FD3FF"/>`;
+    }
+    if (id === 'tall') {
+      return `<path d="M114,68 L110,28 L132,46 L150,16 L168,46 L190,28 L186,68 Z" fill="#FFCF4D" stroke="#D9A21F" stroke-width="2.5" stroke-linejoin="round"/>` +
+        `<rect x="112" y="58" width="76" height="13" rx="6" fill="#E0A91F"/>` +
+        `<circle cx="130" cy="64.5" r="4" fill="#FF6B6B"/><circle cx="150" cy="64.5" r="4" fill="#8FD3FF"/><circle cx="170" cy="64.5" r="4" fill="#7FE0B5"/>` +
+        `<circle cx="110" cy="28" r="4" fill="#fff"/><circle cx="150" cy="16" r="4.5" fill="#fff"/><circle cx="190" cy="28" r="4" fill="#fff"/>`;
+    }
+    if (id === 'flowers') {
+      let o = '';
+      const petals = ['#FF8FC2', '#ffffff', '#C7B3FF'];
+      for (let i = 0; i < 7; i++) {
+        const t = i / 6;
+        const x = 96 * (1 - t) * (1 - t) + 2 * (1 - t) * t * 150 + t * t * 204;
+        const y = 96 * (1 - t) * (1 - t) + 2 * (1 - t) * t * 26 + t * t * 96;
+        if (i < 6) {
+          const t2 = (i + 0.5) / 6;
+          const lx = 96 * (1 - t2) * (1 - t2) + 2 * (1 - t2) * t2 * 150 + t2 * t2 * 204;
+          const ly = 96 * (1 - t2) * (1 - t2) + 2 * (1 - t2) * t2 * 26 + t2 * t2 * 96;
+          o += `<ellipse cx="${lx.toFixed(1)}" cy="${(ly - 2).toFixed(1)}" rx="7" ry="4" fill="#7FCF8F"/>`;
+        }
+        o += flower(+x.toFixed(1), +y.toFixed(1), 6, petals[i % 3]);
+      }
+      return o;
+    }
+    if (id === 'star') {
+      return `<path d="M94,104 Q150,30 206,104" fill="none" stroke="#B58CFF" stroke-width="7" stroke-linecap="round"/>` +
+        `<polygon points="${starPts(150, 54, 19)}" fill="#FFE08A" stroke="#F2B830" stroke-width="2" stroke-linejoin="round"/>`;
+    }
+    if (id === 'bow') {
+      return `<path d="M186,72 L178,98 M186,72 L196,96" stroke="#E0457E" stroke-width="5" stroke-linecap="round"/>` +
+        `<path d="M186,72 C170,48 150,56 158,78 C164,92 180,82 186,72 Z" fill="#FF6B9A"/>` +
+        `<path d="M186,72 C202,48 222,56 214,78 C208,92 192,82 186,72 Z" fill="#FF6B9A"/>` +
+        `<circle cx="186" cy="73" r="6.5" fill="#E0457E"/>`;
+    }
+    return '';
+  }
+
+  function handItem(s) {
+    const id = HAND[s.hand].id;
+    if (id === 'wand') {
+      return `<line x1="200" y1="276" x2="226" y2="214" stroke="#FFF4C2" stroke-width="5" stroke-linecap="round"/>` +
+        `<polygon points="${starPts(228, 206, 17)}" fill="#FFD66E" stroke="#F2B830" stroke-width="2" stroke-linejoin="round"/>` +
+        `<polygon points="${starPts(250, 186, 5)}" fill="#fff"/><polygon points="${starPts(210, 184, 4)}" fill="#fff"/>`;
+    }
+    if (id === 'flowers') {
+      return `<path d="M200,272 L212,232 M200,272 L226,242 M200,272 L196,230" stroke="#6CBF7C" stroke-width="3.5" stroke-linecap="round" fill="none"/>` +
+        flower(212, 228, 7, '#FF8FC2') + flower(228, 240, 6.5, '#C7B3FF') + flower(195, 226, 6.5, '#FFD66E', '#FF8FC2');
+    }
+    if (id === 'balloon') {
+      return `<path d="M200,272 Q222,220 234,160" stroke="#9b8aa8" stroke-width="1.6" fill="none"/>` +
+        `<ellipse cx="238" cy="128" rx="26" ry="30" fill="#FF8FC2"/>` +
+        `<polygon points="234,158 242,158 238,152" fill="#E0609E"/>` +
+        `<ellipse cx="228" cy="116" rx="6" ry="10" fill="#fff" opacity=".45" transform="rotate(-20 228 116)"/>`;
+    }
+    if (id === 'purse') {
+      return `<path d="M188,300 Q200,262 214,300" stroke="#8C60E0" stroke-width="3.5" fill="none"/>` +
+        `<path d="${heartD(201, 306, 15)}" fill="#B58CFF"/>` +
+        `<circle cx="201" cy="302" r="3.5" fill="#FFD66E"/>`;
+    }
+    return '';
+  }
+
+  // ================= RENDER =================
+  function fullDoll(s) {
+    return `<ellipse cx="150" cy="428" rx="112" ry="11" fill="#8c5ac8" opacity=".15"/>` +
+      capeBack(s) + hairBack(s) + legs(s) + neck(s) + skirt(s) + bodice(s) +
+      arms(s) + sleeves(s) + capeFront(s) + shoes(s) +
+      head(s) + face(s) + hairFront(s) + crown(s) + handItem(s) + hands(s);
+  }
+
+  function thumb(key, i) {
+    const s = { ...state, [key]: i };
+    const svg = (vb, inner) => `<svg viewBox="${vb}" aria-hidden="true">${inner}</svg>`;
+    switch (key) {
+      case 'dress': return svg('40 172 220 258', skirt(s) + bodice(s) + sleeves(s));
+      case 'hairStyle':
+      case 'hairColor': return svg('62 18 176 262', hairBack(s) + head(s) + face(s) + hairFront(s));
+      case 'skin': return svg('88 58 124 126', head(s) + face(s));
+      case 'crown': return CROWNS[i].id === 'none' ? svg('0 0 100 100', noneIcon) : svg('84 10 132 100', crown(s));
+      case 'cape': return CAPES[i].id === 'none' ? svg('0 0 100 100', noneIcon) : svg('20 176 260 258', capeBack(s) + capeFront(s));
+      case 'shoes': return svg('108 386 84 46', shoes(s));
+      case 'hand': return HAND[i].id === 'none' ? svg('0 0 100 100', noneIcon) : svg('160 92 104 208', handItem(s) + `<circle cx="200" cy="275" r="9.5" fill="${SKIN[s.skin].c}"/>`);
+    }
+    return '';
+  }
+
+  const TABS = [
+    { label: 'Dresses', icon: ['dress', 0], items: DRESSES.map((d, i) => ({ key: 'dress', i, name: d.name })) },
+    { label: 'Hair', icon: ['hairStyle', 0], items: [
+      ...HAIR_STYLES.map((h, i) => ({ key: 'hairStyle', i, name: h.name })),
+      ...HAIR_COLORS.map((h, i) => ({ key: 'hairColor', i, name: h.name }))
+    ] },
+    { label: 'Crowns', icon: ['crown', 2], items: CROWNS.map((c, i) => ({ key: 'crown', i, name: c.name })) },
+    { label: 'Capes', icon: ['cape', 1], items: CAPES.map((c, i) => ({ key: 'cape', i, name: c.name })) },
+    { label: 'Shoes', icon: ['shoes', 0], items: SHOES.map((c, i) => ({ key: 'shoes', i, name: c.name })) },
+    { label: 'Magic', icon: ['hand', 1], items: HAND.map((c, i) => ({ key: 'hand', i, name: c.name })) },
+    { label: 'Skin', icon: ['skin', 1], items: SKIN.map((c, i) => ({ key: 'skin', i, name: '' })) }
+  ];
+
+  const dollEl = document.getElementById('doll');
+  const wrapEl = document.getElementById('dollWrap');
+  const tabsEl = document.getElementById('tabs');
+  const optsEl = document.getElementById('options');
+  const stage = document.getElementById('stage');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let activeTab = 0;
+
+  function renderDoll(pop) {
+    dollEl.innerHTML = fullDoll(state);
+    if (pop && !reduceMotion) {
+      dollEl.classList.remove('pop');
+      void dollEl.getBoundingClientRect();
+      dollEl.classList.add('pop');
+    }
+  }
+
+  function renderTabs() {
+    tabsEl.innerHTML = '';
+    TABS.forEach((t, idx) => {
+      const b = document.createElement('button');
+      b.className = 'tab';
+      b.setAttribute('aria-label', t.label);
+      b.setAttribute('aria-pressed', String(idx === activeTab));
+      b.innerHTML = t.label === 'Magic'
+        ? `<svg viewBox="180 178 78 108" aria-hidden="true">${handItem({ ...state, hand: 1 })}</svg>`
+        : thumb(t.icon[0], t.icon[1]);
+      b.addEventListener('click', () => {
+        unlockAudio();
+        activeTab = idx;
+        renderTabs();
+        renderOptions(true);
+        tone(880, 0, 0.2, 0.25);
+      });
+      tabsEl.appendChild(b);
+    });
+  }
+
+  function renderOptions(resetScroll) {
+    const tab = TABS[activeTab];
+    optsEl.innerHTML = '';
+    tab.items.forEach((it) => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.setAttribute('aria-label', it.name || `${tab.label} ${it.i + 1}`);
+      b.setAttribute('aria-pressed', String(state[it.key] === it.i));
+      b.innerHTML = thumb(it.key, it.i);
+      b.addEventListener('click', () => choose(it, b));
+      optsEl.appendChild(b);
+    });
+    if (resetScroll) optsEl.scrollLeft = 0;
+  }
+
+  function choose(it, btn) {
+    unlockAudio();
+    const changed = state[it.key] !== it.i;
+    state[it.key] = it.i;
+    const keep = optsEl.scrollLeft;
+    renderDoll(true);
+    renderOptions(false);
+    optsEl.scrollLeft = keep;
+    tone([1046.5, 1174.66, 1318.51, 1567.98][Math.floor(Math.random() * 4)], 0, 0.5, 0.35);
+    say(it.name);
+    if (changed) sparkles(6);
+  }
+
+  // ================= EFFECTS =================
+  function sparkles(n) {
+    const r = dollEl.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+    const colors = ['#FFD66E', '#ffffff', '#FF8FC2', '#8FD3FF', '#C7B3FF'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'sparkle';
+      const x = r.left - sr.left + r.width * (0.15 + Math.random() * 0.7);
+      const y = r.top - sr.top + r.height * (0.1 + Math.random() * 0.7);
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px');
+      el.style.setProperty('--dy', (Math.random() * -50 - 10) + 'px');
+      el.innerHTML = `<svg viewBox="0 0 26 26"><polygon points="${starPts(13, 13, 12, 4.5)}" fill="${colors[i % colors.length]}"/></svg>`;
+      stage.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  function twirl() {
+    unlockAudio();
+    [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(f, i * 0.08, 0.6, 0.3));
+    sparkles(16);
+    if (reduceMotion) return;
+    wrapEl.classList.remove('twirl');
+    void wrapEl.getBoundingClientRect();
+    wrapEl.classList.add('twirl');
+  }
+  wrapEl.addEventListener('animationend', (e) => { if (e.target === wrapEl) wrapEl.classList.remove('twirl'); });
+  wrapEl.addEventListener('click', twirl);
+  wrapEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); twirl(); } });
+
+  function surprise() {
+    unlockAudio();
+    const pick = (arr, cur) => { let v; do { v = Math.floor(Math.random() * arr.length); } while (arr.length > 1 && v === cur); return v; };
+    state.dress = pick(DRESSES, state.dress);
+    state.hairStyle = Math.floor(Math.random() * HAIR_STYLES.length);
+    state.hairColor = Math.floor(Math.random() * HAIR_COLORS.length);
+    state.crown = 1 + Math.floor(Math.random() * (CROWNS.length - 1));
+    state.cape = Math.floor(Math.random() * CAPES.length);
+    state.shoes = Math.floor(Math.random() * SHOES.length);
+    state.hand = Math.floor(Math.random() * HAND.length);
+    renderDoll(false);
+    renderOptions(false);
+    say('Surprise!');
+    twirl();
+  }
+  document.getElementById('surpriseBtn').addEventListener('click', surprise);
+
+  // blink every few seconds
+  (function blinkLoop() {
+    setTimeout(() => {
+      dollEl.classList.add('blink');
+      setTimeout(() => { dollEl.classList.remove('blink'); blinkLoop(); }, 140);
+    }, 2500 + Math.random() * 3000);
+  })();
+
+  // ================= SOUND + VOICE =================
+  let ac = null, master = null, soundOn = true;
+  function unlockAudio() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.16;
+      master.connect(ac.destination);
+    }
+    if (ac.state === 'suspended') ac.resume();
+  }
+  function tone(freq, when = 0, len = 0.5, vol = 0.4) {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime + when;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + len + 0.05);
+  }
+  function say(text) {
+    if (!soundOn || !text || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9;
+      u.pitch = 1.25;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    soundOn = !soundOn;
+    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    document.getElementById('waves').style.display = soundOn ? '' : 'none';
+    document.getElementById('mute').style.display = soundOn ? 'none' : '';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    if (soundOn) tone(880, 0, 0.25, 0.3);
+  });
+
+  // stop iOS pinch zoom and long-press menus
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // ================= START =================
+  renderDoll(false);
+  renderTabs();
+  renderOptions(true);
+})();
+</script>
+</body>
+</html>

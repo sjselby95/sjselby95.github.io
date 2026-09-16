@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#bfe9ff">
+<title>Seashell Beach</title>
+<!--
+  SEASHELL BEACH — wipe-the-sand treasure hunt toy for a 3-year-old (phone, touch-first)
+
+  How it plays:
+  - Rub the sand with a finger to uncover hidden treasures: shells, a starfish, a crab, a sand dollar,
+    sea glass, and a baby turtle (6 per beach, picked at random).
+  - When a treasure is mostly uncovered it pops out, sparkles, and its name is said out loud.
+  - Tap a treasure (or drag it) to put it in the bucket. The dots at the top fill up as she collects.
+  - When the bucket has all six, a big wave washes in and brings a brand-new beach.
+  - If she hasn't touched anything for a few seconds, a sparkle twinkles over a hidden treasure as a hint.
+  - Top-left: sound/voice on/off. Top-right: call a wave for a new beach any time.
+
+  INTEGRATION NOTES (for Claude Code):
+  - This is a TOY. Parent page is /toys.html. Add a card for it there, and place the file
+    wherever the other toys linked from /toys.html already live.
+  - Fully self-contained: no external fonts, images, audio, scripts, or storage.
+  - No in-page back link on purpose (toddler taps). If the other toys link back to /toys.html,
+    keep it small and away from the bucket (bottom-right) and the two top corner buttons.
+  - Voice uses the browser's built-in speechSynthesis; audio unlocks on first touch (iOS requirement).
+  - Bright beach palette on purpose instead of the site's OLED/green theme — it's kid-facing.
+-->
+<style>
+  :root{
+    --sky:#bfe9ff;
+    --sea:#4fb8e3;
+    --sea-light:#8fd6f2;
+    --foam:#ffffff;
+    --sand:#f3dca8;
+    --wet:#e0bb82;
+    --pail:#ff7a8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--sand)}
+  body{
+    touch-action:none;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+  }
+  button{border:0;background:none;cursor:pointer}
+  button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+  #beach{position:fixed;inset:0;overflow:hidden}
+  .sky{position:absolute;left:0;right:0;top:0;height:20%;background:linear-gradient(180deg,#9fdcff,var(--sky))}
+  .sun{position:absolute;left:22%;top:calc(58px + env(safe-area-inset-top));width:44px;height:44px;border-radius:50%;background:#ffe27a;box-shadow:0 0 0 10px rgba(255,226,122,.35)}
+  .sea{position:absolute;left:0;right:0;top:14%;height:14%;background:linear-gradient(180deg,var(--sea),var(--sea-light));overflow:hidden}
+  .wave{position:absolute;left:0;bottom:-2px;width:200%;height:26px;animation:drift 7s linear infinite}
+  .wave.two{bottom:8px;opacity:.5;animation-duration:11s;animation-direction:reverse}
+  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  #sand{position:absolute;left:0;right:0;top:26%;bottom:0}
+  .wet{position:absolute;inset:0;background:var(--wet)}
+  #sandCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:2}
+  #hidden,#free{position:absolute;inset:0}
+  #hidden{z-index:1}
+  #free{z-index:3;pointer-events:none}
+
+  .item{position:absolute;touch-action:none}
+  .item .inner{width:100%;height:100%}
+  .item svg{width:100%;height:100%;display:block;overflow:visible}
+  #free .item{pointer-events:auto;cursor:grab;filter:drop-shadow(0 4px 3px rgba(120,80,30,.3))}
+  #free .item .inner{animation:popOut .45s cubic-bezier(.3,1.6,.5,1), bob 2.2s ease-in-out .45s infinite}
+  #free .item.crab .inner{animation:popOut .45s cubic-bezier(.3,1.6,.5,1), scuttle 1.4s ease-in-out .45s infinite}
+  #free .item.flying{transition:transform .5s cubic-bezier(.5,0,.7,1),opacity .5s;pointer-events:none}
+  @keyframes popOut{0%{transform:scale(.6) translateY(10px)}100%{transform:scale(1) translateY(0)}}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(-4deg)}}
+  @keyframes scuttle{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px) rotate(-3deg)}75%{transform:translateX(8px) rotate(3deg)}}
+
+  .progress{
+    position:absolute;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);
+    display:flex;gap:8px;padding:8px 12px;border-radius:20px;background:rgba(255,255,255,.6);z-index:6
+  }
+  .dot{width:16px;height:16px;border-radius:50%;background:rgba(90,150,190,.25);transition:transform .25s,background .25s}
+  .dot.on{background:var(--pail);transform:scale(1.2)}
+
+  .corner{
+    position:absolute;top:calc(8px + env(safe-area-inset-top));
+    width:52px;height:52px;border-radius:50%;
+    background:rgba(255,255,255,.75);box-shadow:0 3px 10px rgba(40,100,140,.2);
+    display:grid;place-items:center;z-index:7
+  }
+  .corner svg{width:28px;height:28px}
+  #soundBtn{left:10px}
+  #waveBtn{right:10px}
+
+  .bucket{
+    position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+    width:118px;height:124px;z-index:5;pointer-events:none
+  }
+  .bucket svg{position:absolute;left:0;top:0;width:100%;height:100%}
+  .bucket .contents{position:absolute;left:14px;right:14px;top:10px;height:44px}
+  .bucket .contents .mini{position:absolute;width:40px;height:40px}
+  .bucket .contents .mini svg{position:static}
+  .bucket.wiggle{animation:wiggle .4s ease-in-out}
+  @keyframes wiggle{0%,100%{transform:rotate(0)}30%{transform:rotate(-7deg)}70%{transform:rotate(6deg)}}
+
+  .bigwave{position:absolute;left:0;right:0;top:0;height:100%;z-index:6;pointer-events:none;transform:translateY(-110%);transition:transform .9s cubic-bezier(.45,0,.35,1)}
+  .bigwave.in{transform:translateY(0)}
+  .bigwave .body{position:absolute;left:0;right:0;top:0;bottom:60px;background:linear-gradient(180deg,#4fb8e3,#8fd6f2)}
+  .bigwave svg{position:absolute;left:0;bottom:0;width:100%;height:62px}
+
+  .sparkle{position:absolute;width:26px;height:26px;pointer-events:none;z-index:8;animation:sparkle .9s ease-out forwards}
+  @keyframes sparkle{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0)}
+    30%{opacity:1}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(160deg)}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .wave,#free .item .inner,#free .item.crab .inner{animation:none}
+    .bigwave{transition-duration:.3s}
+  }
+</style>
+</head>
+<body>
+<main id="beach">
+  <div class="sky"><div class="sun"></div></div>
+  <div class="sea" aria-hidden="true">
+    <svg class="wave two" viewBox="0 0 800 26" preserveAspectRatio="none"><path d="M0,14 Q50,0 100,14 T200,14 T300,14 T400,14 T500,14 T600,14 T700,14 T800,14 V26 H0 Z" fill="#ffffff"/></svg>
+    <svg class="wave" viewBox="0 0 800 26" preserveAspectRatio="none"><path d="M0,14 Q50,0 100,14 T200,14 T300,14 T400,14 T500,14 T600,14 T700,14 T800,14 V26 H0 Z" fill="#f3dca8"/></svg>
+  </div>
+
+  <div id="sand">
+    <div class="wet"></div>
+    <div id="hidden"></div>
+    <canvas id="sandCanvas" aria-label="Sand. Rub it to find hidden treasures."></canvas>
+    <div id="free"></div>
+  </div>
+
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <button class="corner" id="soundBtn" aria-label="Sound on" aria-pressed="true">
+    <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#2f7fb0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 10h4l5-4v14l-5-4H4z" fill="#2f7fb0"/>
+      <path id="waves" d="M17 9.5a5 5 0 0 1 0 7M20 7a8.5 8.5 0 0 1 0 12"/>
+      <path id="mute" d="M17 10l6 6M23 10l-6 6" style="display:none"/>
+    </svg>
+  </button>
+  <button class="corner" id="waveBtn" aria-label="New beach">
+    <svg viewBox="0 0 28 28" aria-hidden="true">
+      <path d="M2,18 C6,8 16,4 22,10 C18,9 15,12 17,15 C19,18 24,16 26,14 C25,21 19,25 12,24 C7,24 4,22 2,18 Z" fill="#4fb8e3"/>
+      <path d="M17,15 C15,12 18,9 22,10" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <div class="bucket" id="bucket" aria-hidden="true">
+    <svg viewBox="0 0 118 124">
+      <path d="M14,34 Q59,-18 104,34" stroke="#c9d6df" stroke-width="5" fill="none"/>
+      <ellipse cx="59" cy="40" rx="47" ry="12" fill="#c9505f"/>
+    </svg>
+    <div class="contents" id="contents"></div>
+    <svg viewBox="0 0 118 124">
+      <path d="M12,40 L24,116 Q59,126 94,116 L106,40 Q59,56 12,40 Z" fill="#ff7a8a"/>
+      <path d="M12,40 Q59,56 106,40" stroke="#ffb3bd" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M22,98 Q59,108 96,98" stroke="#ffffff" stroke-width="4" fill="none" opacity=".5"/>
+      <polygon points="59,62 64,73 76,74 67,81 70,93 59,86 48,93 51,81 42,74 54,73" fill="#ffe27a"/>
+    </svg>
+  </div>
+
+  <div class="bigwave" id="bigwave" aria-hidden="true">
+    <div class="body"></div>
+    <svg viewBox="0 0 400 62" preserveAspectRatio="none">
+      <path d="M0,0 H400 V30 Q380,58 360,34 Q340,62 320,34 Q300,58 280,34 Q260,62 240,34 Q220,58 200,34 Q180,62 160,34 Q140,58 120,34 Q100,62 80,34 Q60,58 40,34 Q20,62 0,34 Z" fill="#8fd6f2"/>
+      <path d="M0,34 Q20,62 40,34 Q60,58 80,34 Q100,62 120,34 Q140,58 160,34 Q180,62 200,34 Q220,58 240,34 Q260,62 280,34 Q300,58 320,34 Q340,62 360,34 Q380,58 400,34" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+</main>
+
+<script>
+(() => {
+  // ================= TREASURE ART =================
+  const starPts = (x, y, r, ri = r * 0.45) => {
+    const p = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? ri : r;
+      p.push((x + Math.cos(a) * rr).toFixed(1) + ',' + (y + Math.sin(a) * rr).toFixed(1));
+    }
+    return p.join(' ');
+  };
+
+  const TREASURES = [
+    { id: 'scallop', name: 'pink shell', svg:
+      `<path d="M50,90 C40,84 12,54 14,40 C18,18 36,10 50,10 C64,10 82,18 86,40 C88,54 60,84 50,90 Z" fill="#FF9FC0"/>` +
+      `<path d="M50,86 L22,36 M50,86 L32,20 M50,86 L42,14 M50,86 L50,12 M50,86 L58,14 M50,86 L68,20 M50,86 L78,36" stroke="#E0709A" stroke-width="3" stroke-linecap="round"/>` +
+      `<path d="M36,82 L50,92 L64,82 L60,96 L40,96 Z" fill="#F07FA8"/>` },
+    { id: 'conch', name: 'spiral shell', svg:
+      `<path d="M14,70 C6,48 28,18 60,16 C86,16 96,40 84,60 C72,78 40,90 14,70 Z" fill="#FFC59E"/>` +
+      `<path d="M84,34 L98,26 L90,42 Z" fill="#F2A77A"/>` +
+      `<ellipse cx="34" cy="66" rx="16" ry="10" fill="#FFD9E4" transform="rotate(-25 34 66)"/>` +
+      `<path d="M66,40 a8,8 0 1 1 -8,-8 a14,14 0 1 1 14,14 a20,20 0 0 1 -26,-12" stroke="#E8946A" stroke-width="3.5" fill="none" stroke-linecap="round"/>` },
+    { id: 'clam', name: 'purple clam', svg:
+      `<path d="M8,56 C12,20 88,20 92,56 Z" fill="#C7B3FF"/>` +
+      `<path d="M8,56 C18,84 82,84 92,56 Z" fill="#AE95F2"/>` +
+      `<path d="M20,52 C24,34 34,28 42,26 M50,52 L50,24 M80,52 C76,34 66,28 58,26" stroke="#9A7EE8" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+      `<circle cx="50" cy="58" r="8" fill="#ffffff"/><circle cx="47" cy="55" r="2.5" fill="#E8F4FF"/>` },
+    { id: 'starfish', name: 'orange starfish', svg:
+      `<polygon points="${starPts(50, 54, 40, 18)}" fill="#FF9A4D" stroke="#FF9A4D" stroke-width="10" stroke-linejoin="round"/>` +
+      [[50, 30], [72, 46], [64, 70], [36, 70], [28, 46], [50, 52]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="#FFD2A8"/>`).join('') },
+    { id: 'crab', name: 'red crab', svg:
+      `<path d="M22,62 L6,70 M22,70 L8,82 M78,62 L94,70 M78,70 L92,82" stroke="#E04A3F" stroke-width="5" stroke-linecap="round"/>` +
+      `<path d="M26,46 L12,30 M74,46 L88,30" stroke="#E04A3F" stroke-width="5" stroke-linecap="round"/>` +
+      `<path d="M4,26 C4,12 22,12 20,26 C18,32 10,34 4,26 Z M12,24 L20,18" fill="#FF6B5E" stroke="#E04A3F" stroke-width="2"/>` +
+      `<path d="M96,26 C96,12 78,12 80,26 C82,32 90,34 96,26 Z" fill="#FF6B5E" stroke="#E04A3F" stroke-width="2"/>` +
+      `<ellipse cx="50" cy="62" rx="32" ry="22" fill="#FF6B5E"/>` +
+      `<line x1="40" y1="44" x2="38" y2="30" stroke="#E04A3F" stroke-width="4"/><line x1="60" y1="44" x2="62" y2="30" stroke="#E04A3F" stroke-width="4"/>` +
+      `<circle cx="38" cy="28" r="7" fill="#fff"/><circle cx="62" cy="28" r="7" fill="#fff"/>` +
+      `<circle cx="39" cy="29" r="3.5" fill="#3a2a3f"/><circle cx="61" cy="29" r="3.5" fill="#3a2a3f"/>` +
+      `<path d="M42,68 Q50,75 58,68" stroke="#b8322a" stroke-width="3" fill="none" stroke-linecap="round"/>` },
+    { id: 'sanddollar', name: 'sand dollar', svg:
+      `<circle cx="50" cy="52" r="38" fill="#F2E4CC" stroke="#D9C3A0" stroke-width="3"/>` +
+      [0, 72, 144, 216, 288].map((a) => `<ellipse cx="50" cy="34" rx="5" ry="13" fill="#DCC7A4" transform="rotate(${a} 50 52)"/>`).join('') +
+      `<circle cx="50" cy="52" r="4" fill="#CFB68C"/>` },
+    { id: 'seaglass', name: 'green sea glass', svg:
+      `<path d="M22,40 C24,22 50,14 70,22 C86,28 90,50 80,66 C70,82 40,86 26,72 C16,62 20,52 22,40 Z" fill="#7FD8B0" opacity=".9"/>` +
+      `<path d="M34,34 C42,26 56,24 64,28" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".7"/>` +
+      `<circle cx="70" cy="58" r="4" fill="#fff" opacity=".5"/>` },
+    { id: 'turtle', name: 'baby turtle', svg:
+      `<ellipse cx="22" cy="36" rx="12" ry="7" fill="#7CC77E" transform="rotate(-35 22 36)"/>` +
+      `<ellipse cx="78" cy="36" rx="12" ry="7" fill="#7CC77E" transform="rotate(35 78 36)"/>` +
+      `<ellipse cx="26" cy="76" rx="10" ry="6" fill="#7CC77E" transform="rotate(35 26 76)"/>` +
+      `<ellipse cx="74" cy="76" rx="10" ry="6" fill="#7CC77E" transform="rotate(-35 74 76)"/>` +
+      `<circle cx="50" cy="20" r="12" fill="#7CC77E"/><circle cx="45" cy="17" r="2.5" fill="#2e3a2e"/><circle cx="55" cy="17" r="2.5" fill="#2e3a2e"/>` +
+      `<ellipse cx="50" cy="56" rx="28" ry="30" fill="#3FA56A"/>` +
+      `<polygon points="50,40 62,48 62,62 50,70 38,62 38,48" fill="#63C184"/>` +
+      `<path d="M50,26 L50,40 M62,48 L76,42 M62,62 L76,70 M50,70 L50,86 M38,62 L24,70 M38,48 L24,42" stroke="#63C184" stroke-width="3"/>` }
+  ];
+  const PER_BEACH = 6;
+
+  // ================= ELEMENTS =================
+  const beach = document.getElementById('beach');
+  const sandEl = document.getElementById('sand');
+  const canvas = document.getElementById('sandCanvas');
+  const ctx = canvas.getContext('2d');
+  const hiddenEl = document.getElementById('hidden');
+  const freeEl = document.getElementById('free');
+  const bucket = document.getElementById('bucket');
+  const contents = document.getElementById('contents');
+  const progress = document.getElementById('progress');
+  const bigwave = document.getElementById('bigwave');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, DPR = 1, brush = 34;
+  let items = [];
+  let collected = 0;
+  let busy = false;
+  let lastTouch = performance.now();
+  let lastWidth = 0;
+
+  // ================= SAND =================
+  function sizeCanvas() {
+    const r = sandEl.getBoundingClientRect();
+    W = r.width; H = r.height;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    brush = Math.max(26, Math.min(42, W * 0.075));
+  }
+
+  function paintSand() {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#F3DCA8';
+    ctx.fillRect(0, 0, W, H);
+    const colors = ['#E6C88E', '#FBEBC6', '#D9B878', '#EBD19B'];
+    const n = Math.round((W * H) / 70);
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 1.4 + 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#D9B878';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
+      const y = (H / 9) * i + Math.random() * 20;
+      const x = Math.random() * W * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + 40, y - 8, x + 80 + Math.random() * 60, y + 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function eraseLine(x0, y0, x1, y1, r = brush) {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = r * 2;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // ================= ROUND =================
+  function newBeach() {
+    hiddenEl.innerHTML = '';
+    freeEl.innerHTML = '';
+    contents.innerHTML = '';
+    items = [];
+    collected = 0;
+    sizeCanvas();
+    paintSand();
+
+    const size = Math.max(66, Math.min(110, Math.min(W, H) * 0.2));
+    const pool = TREASURES.slice().sort(() => Math.random() - 0.5).slice(0, PER_BEACH);
+    const bucketZone = { x: W - 150, y: H - 150 };
+    const placed = [];
+    pool.forEach((t) => {
+      let x, y, tries = 0, ok;
+      do {
+        x = size * 0.1 + Math.random() * (W - size * 1.2);
+        y = size * 0.25 + Math.random() * (H - size * 1.4);
+        ok = !(x + size > bucketZone.x && y + size > bucketZone.y) &&
+          placed.every((p) => Math.hypot(p.x - x, p.y - y) > size * 1.15);
+        tries++;
+      } while (!ok && tries < 200);
+      placed.push({ x, y });
+
+      const el = document.createElement('div');
+      el.className = 'item ' + t.id;
+      el.style.width = el.style.height = size + 'px';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.setAttribute('aria-label', t.name);
+      el.innerHTML = `<div class="inner"><svg viewBox="0 0 100 100" aria-hidden="true">${t.svg}</svg></div>`;
+      hiddenEl.appendChild(el);
+      items.push({ t, el, x, y, size, state: 'hidden' });
+    });
+
+    progress.innerHTML = '';
+    for (let i = 0; i < PER_BEACH; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot';
+      progress.appendChild(d);
+    }
+  }
+
+  function checkReveals() {
+    for (const it of items) {
+      if (it.state !== 'hidden') continue;
+      const inset = it.size * 0.18;
+      const sx = Math.max(0, Math.floor((it.x + inset) * DPR));
+      const sy = Math.max(0, Math.floor((it.y + inset) * DPR));
+      const sw = Math.max(1, Math.floor((it.size - inset * 2) * DPR));
+      const sh = sw;
+      let data;
+      try { data = ctx.getImageData(sx, sy, sw, sh).data; } catch (_) { continue; }
+      let clear = 0, total = 0;
+      const step = Math.max(1, Math.floor(sw / 8));
+      for (let yy = 0; yy < sh; yy += step) {
+        for (let xx = 0; xx < sw; xx += step) {
+          total++;
+          if (data[(yy * sw + xx) * 4 + 3] < 80) clear++;
+        }
+      }
+      if (total && clear / total > 0.5) freeItem(it);
+    }
+  }
+
+  function freeItem(it) {
+    it.state = 'free';
+    // clear the sand under it so the hole looks right
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.ellipse(it.x + it.size / 2, it.y + it.size / 2, it.size * 0.58, it.size * 0.58, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    freeEl.appendChild(it.el);
+    attachDrag(it);
+    [1046.5, 1318.51, 1567.98].forEach((f, i) => tone(f, i * 0.07, 0.5, 0.35));
+    say(it.t.name);
+    const r = it.el.getBoundingClientRect();
+    sparkles(r.left + r.width / 2, r.top + r.height / 2, 10);
+  }
+
+  function attachDrag(it) {
+    const el = it.el;
+    let start = null;
+    el.addEventListener('pointerdown', (e) => {
+      if (it.state !== 'free') return;
+      e.preventDefault();
+      e.stopPropagation();
+      unlockAudio();
+      lastTouch = performance.now();
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      start = { px: e.clientX, py: e.clientY, x: it.x, y: it.y, id: e.pointerId, moved: 0 };
+      el.style.zIndex = 10;
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!start || e.pointerId !== start.id) return;
+      const dx = e.clientX - start.px, dy = e.clientY - start.py;
+      start.moved = Math.max(start.moved, Math.hypot(dx, dy));
+      it.x = start.x + dx; it.y = start.y + dy;
+      el.style.left = it.x + 'px';
+      el.style.top = it.y + 'px';
+    });
+    const end = (e) => {
+      if (!start || e.pointerId !== start.id) return;
+      const moved = start.moved;
+      start = null;
+      const br = bucket.getBoundingClientRect();
+      const overBucket = e.clientX > br.left - 20 && e.clientX < br.right + 20 && e.clientY > br.top - 30 && e.clientY < br.bottom + 20;
+      if (moved < 12 || overBucket) collect(it);
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+
+  function collect(it) {
+    if (it.state !== 'free') return;
+    it.state = 'collected';
+    const el = it.el;
+    const er = el.getBoundingClientRect();
+    const br = bucket.getBoundingClientRect();
+    const dx = br.left + br.width / 2 - (er.left + er.width / 2);
+    const dy = br.top + br.height * 0.3 - (er.top + er.height / 2);
+    el.classList.add('flying');
+    void el.getBoundingClientRect();
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(.35)`;
+    tone(700, 0, 0.12, 0.35);
+    tone(500, 0.08, 0.2, 0.3);
+
+    setTimeout(() => {
+      el.remove();
+      const mini = document.createElement('div');
+      mini.className = 'mini';
+      const slot = collected;
+      mini.style.left = (6 + ((slot * 29) % 58)) + 'px';
+      mini.style.top = (slot % 2 ? 10 : -2) + 'px';
+      mini.style.transform = `rotate(${Math.round(Math.random() * 50 - 25)}deg)`;
+      mini.innerHTML = `<svg viewBox="0 0 100 100">${it.t.svg}</svg>`;
+      contents.appendChild(mini);
+      collected++;
+      progress.children[collected - 1]?.classList.add('on');
+      bucket.classList.remove('wiggle');
+      void bucket.getBoundingClientRect();
+      bucket.classList.add('wiggle');
+      sparkles(br.left + br.width / 2, br.top + br.height * 0.3, 6);
+      if (collected >= PER_BEACH) celebrate();
+    }, reduceMotion ? 150 : 500);
+  }
+
+  function celebrate() {
+    busy = true;
+    [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98].forEach((f, i) => tone(f, i * 0.09, 0.7, 0.35));
+    say('You found them all!');
+    const r = beach.getBoundingClientRect();
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => sparkles(r.width * (0.2 + Math.random() * 0.6), r.height * (0.3 + Math.random() * 0.4), 10), i * 180);
+    }
+    setTimeout(washIn, 1900);
+  }
+
+  function washIn() {
+    busy = true;
+    whoosh();
+    bigwave.classList.add('in');
+    setTimeout(() => {
+      newBeach();
+      bigwave.classList.remove('in');
+      setTimeout(() => { busy = false; }, 900);
+    }, reduceMotion ? 350 : 1000);
+  }
+
+  // ================= INPUT =================
+  const pointers = new Map();
+  let needCheck = false;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (busy) return;
+    e.preventDefault();
+    unlockAudio();
+    lastTouch = performance.now();
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    pointers.set(e.pointerId, { x, y, lastSound: 0 });
+    eraseLine(x, y, x + 0.1, y + 0.1);
+    needCheck = true;
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    const p = pointers.get(e.pointerId);
+    if (!p || busy) return;
+    lastTouch = performance.now();
+    const r = canvas.getBoundingClientRect();
+    let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    if (!evs || !evs.length) evs = [e];
+    for (const ev of evs) {
+      const x = ev.clientX - r.left, y = ev.clientY - r.top;
+      eraseLine(p.x, p.y, x, y);
+      p.x = x; p.y = y;
+    }
+    needCheck = true;
+    const now = performance.now();
+    if (now - p.lastSound > 120) { sandSound(); p.lastSound = now; }
+  });
+
+  const endPointer = (e) => pointers.delete(e.pointerId);
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+  document.getElementById('waveBtn').addEventListener('click', () => {
+    unlockAudio();
+    if (!busy) washIn();
+  });
+
+  // ================= LOOP: reveal checks + hints =================
+  let lastCheck = 0, lastHint = 0;
+  function loop(ts) {
+    if (needCheck && ts - lastCheck > 100) {
+      needCheck = false;
+      lastCheck = ts;
+      checkReveals();
+    }
+    if (!busy && ts - lastTouch > 5000 && ts - lastHint > 3500) {
+      lastHint = ts;
+      const hidden = items.filter((i) => i.state === 'hidden');
+      if (hidden.length) {
+        const it = hidden[Math.floor(Math.random() * hidden.length)];
+        const r = sandEl.getBoundingClientRect();
+        sparkles(r.left + it.x + it.size / 2, r.top + it.y + it.size / 2, 3, true);
+        tone(1760, 0, 0.3, 0.15);
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ================= SPARKLES =================
+  function sparkles(x, y, n, gentle) {
+    const colors = ['#FFE27A', '#ffffff', '#FF9FC0', '#8FD6F2'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'sparkle';
+      el.style.left = (x + (gentle ? (Math.random() * 30 - 15) : 0)) + 'px';
+      el.style.top = (y + (gentle ? (Math.random() * 30 - 15) : 0)) + 'px';
+      const spread = gentle ? 16 : 70;
+      el.style.setProperty('--dx', (Math.random() * spread * 2 - spread) + 'px');
+      el.style.setProperty('--dy', (Math.random() * -spread - 8) + 'px');
+      el.innerHTML = `<svg viewBox="0 0 26 26"><polygon points="${starPts(13, 13, 12, 4.5)}" fill="${colors[i % colors.length]}"/></svg>`;
+      beach.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  // ================= SOUND + VOICE =================
+  let ac = null, master = null, noiseBuf = null, soundOn = true;
+  function unlockAudio() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.18;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 1.5, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === 'suspended') ac.resume();
+  }
+  function tone(freq, when = 0, len = 0.5, vol = 0.4) {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime + when;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + len + 0.05);
+  }
+  function noise(len, freq, q, vol, sweepTo) {
+    if (!ac || !soundOn || !noiseBuf) return;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ac.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(freq, t);
+    if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t + len);
+    f.Q.value = q;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + len * 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t, Math.random()); src.stop(t + len + 0.05);
+  }
+  const sandSound = () => noise(0.14, 2400 + Math.random() * 1200, 0.8, 0.25);
+  const whoosh = () => noise(1.6, 400, 0.6, 0.9, 1800);
+
+  function say(text) {
+    if (!soundOn || !text || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9;
+      u.pitch = 1.25;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    soundOn = !soundOn;
+    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    document.getElementById('waves').style.display = soundOn ? '' : 'none';
+    document.getElementById('mute').style.display = soundOn ? 'none' : '';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    if (soundOn) tone(880, 0, 0.25, 0.3);
+  });
+
+  // ================= START =================
+  window.addEventListener('resize', () => {
+    if (Math.abs(window.innerWidth - lastWidth) > 40) {
+      lastWidth = window.innerWidth;
+      if (!busy) newBeach();
+    }
+  });
+  lastWidth = window.innerWidth;
+  newBeach();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
