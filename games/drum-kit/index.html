@@ -29,6 +29,14 @@
   .gate h1{font-size:clamp(32px,10vw,56px);margin:0;font-weight:800;letter-spacing:-.02em}
   .gate p{margin:0;color:#b89cf0;font-size:17px}
   .gate svg{width:min(46vw,190px);height:auto}
+  .rotate{
+    position:fixed;inset:0;z-index:5;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;
+    background:#0a0812;color:#e9edf3;text-align:center;padding:24px;
+  }
+  .rotate svg{width:96px;height:auto}
+  .rotate p{margin:0;font-size:18px;max-width:16em;color:#b89cf0}
+  @media (orientation:portrait){ .rotate{display:flex} }
 </style>
 </head>
 <body>
@@ -48,6 +56,16 @@
   <p>Tap the drums &mdash; use both hands!</p>
 </div>
 
+<div class="rotate" id="rotate" aria-hidden="true">
+  <svg viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="35" y="16" width="30" height="52" rx="5" fill="none" stroke="#b89cf0" stroke-width="4"/>
+    <circle cx="50" cy="62" r="2.5" fill="#b89cf0"/>
+    <path d="M22 80 a32 32 0 0 0 56 -6" fill="none" stroke="#e6c46b" stroke-width="4" stroke-linecap="round"/>
+    <path d="M78 74 l-9 2 m9 -2 l-3 -9" fill="none" stroke="#e6c46b" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <p>Turn your device sideways to play the drums</p>
+</div>
+
 <script>
 "use strict";
 
@@ -64,66 +82,85 @@ function boot(){
 }
 function noiseSrc(){ const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s; }
 
+/* metallic voice: a bank of inharmonic square partials — the classic way to
+   get a cymbal/hi-hat timbre that plain noise can't reach */
+const HAT_RATIOS = [2, 3, 4.16, 5.43, 6.79, 8.21];
+function metal(t, base, dur, hpFreq, peak){
+  const env = AC.createGain();
+  const hp = AC.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = hpFreq;
+  const bp = AC.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = hpFreq * 1.5; bp.Q.value = 0.7;
+  env.connect(hp); hp.connect(bp); bp.connect(master);
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(peak, t + 0.002);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  HAT_RATIOS.forEach(r => {
+    const o = AC.createOscillator(); o.type = "square"; o.frequency.value = base * r;
+    o.connect(env); o.start(t); o.stop(t + dur + 0.02);
+  });
+}
 function playKick(){
   const t = AC.currentTime, o = AC.createOscillator(), gn = AC.createGain();
   o.type = "sine";
-  o.frequency.setValueAtTime(165, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.12);
-  gn.gain.setValueAtTime(0.9, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + 0.4);
-  const c = AC.createOscillator(), cg = AC.createGain();
-  c.type = "triangle"; c.frequency.value = 1100;
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.10);
+  gn.gain.setValueAtTime(0.0001, t);
+  gn.gain.exponentialRampToValueAtTime(1.0, t + 0.005);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + 0.5);
+  const s = noiseSrc(), hp = AC.createBiquadFilter(), cg = AC.createGain();
+  hp.type = "highpass"; hp.frequency.value = 2500;
   cg.gain.setValueAtTime(0.5, t); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-  c.connect(cg); cg.connect(master); c.start(t); c.stop(t + 0.05);
+  s.connect(hp); hp.connect(cg); cg.connect(master); s.start(t); s.stop(t + 0.05);
 }
 function playSnare(){
   const t = AC.currentTime;
-  const s = noiseSrc(), f = AC.createBiquadFilter(), gn = AC.createGain();
-  f.type = "highpass"; f.frequency.value = 1300;
-  gn.gain.setValueAtTime(0.7, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
-  s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t + 0.25);
-  const o = AC.createOscillator(), og = AC.createGain();
-  o.type = "triangle"; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.1);
-  og.gain.setValueAtTime(0.4, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-  o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.15);
+  const o1 = AC.createOscillator(), o2 = AC.createOscillator(), og = AC.createGain();
+  o1.type = "triangle"; o1.frequency.value = 185;
+  o2.type = "triangle"; o2.frequency.value = 330;
+  og.gain.setValueAtTime(0.5, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o1.connect(og); o2.connect(og); og.connect(master);
+  o1.start(t); o2.start(t); o1.stop(t + 0.15); o2.stop(t + 0.15);
+  const s = noiseSrc(), hp = AC.createBiquadFilter(), ng = AC.createGain();
+  hp.type = "highpass"; hp.frequency.value = 1800;
+  ng.gain.setValueAtTime(0.8, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  s.connect(hp); hp.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.22);
+  const s2 = noiseSrc(), bp = AC.createBiquadFilter(), bg = AC.createGain();
+  bp.type = "bandpass"; bp.frequency.value = 350; bp.Q.value = 1.2;
+  bg.gain.setValueAtTime(0.25, t); bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  s2.connect(bp); bp.connect(bg); bg.connect(master); s2.start(t); s2.stop(t + 0.12);
 }
-function playHat(open){
-  const t = AC.currentTime, dur = open ? 0.4 : 0.055;
-  const s = noiseSrc(), f = AC.createBiquadFilter(), gn = AC.createGain();
-  f.type = "highpass"; f.frequency.value = 7500;
-  gn.gain.setValueAtTime(0.45, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t + dur + 0.02);
-}
+function playHat(open){ metal(AC.currentTime, 40, open ? 0.4 : 0.06, 8000, 0.22); }
 function playTom(freq){
   const t = AC.currentTime, o = AC.createOscillator(), gn = AC.createGain();
   o.type = "sine";
-  o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.3);
-  gn.gain.setValueAtTime(0.85, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + 0.45);
+  o.frequency.setValueAtTime(freq * 1.6, t);
+  o.frequency.exponentialRampToValueAtTime(freq, t + 0.05);
+  o.frequency.exponentialRampToValueAtTime(freq * 0.7, t + 0.4);
+  gn.gain.setValueAtTime(0.0001, t);
+  gn.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+  o.connect(gn); gn.connect(master); o.start(t); o.stop(t + 0.5);
+  const s = noiseSrc(), hp = AC.createBiquadFilter(), ng = AC.createGain();
+  hp.type = "highpass"; hp.frequency.value = 1500;
+  ng.gain.setValueAtTime(0.2, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+  s.connect(hp); hp.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.06);
 }
-function playCymbal(dur){
+function playCrash(){
   const t = AC.currentTime;
-  const s = noiseSrc(), f = AC.createBiquadFilter(), gn = AC.createGain();
-  f.type = "highpass"; f.frequency.value = 5000;
-  gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.32, t + 0.005);
-  gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(f); f.connect(gn); gn.connect(master); s.start(t); s.stop(t + dur + 0.05);
-  const o = AC.createOscillator(), og = AC.createGain();
-  o.type = "square"; o.frequency.value = 3200;
-  og.gain.setValueAtTime(0.05, t); og.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.6);
-  o.connect(og); og.connect(master); o.start(t); o.stop(t + dur);
+  metal(t, 30, 1.4, 5500, 0.24);
+  const s = noiseSrc(), hp = AC.createBiquadFilter(), gn = AC.createGain();
+  hp.type = "highpass"; hp.frequency.value = 4000;
+  gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.2, t + 0.01);
+  gn.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+  s.connect(hp); hp.connect(gn); gn.connect(master); s.start(t); s.stop(t + 1.45);
 }
 function playRide(){
   const t = AC.currentTime;
-  const o = AC.createOscillator(), o2 = AC.createOscillator(), gn = AC.createGain(), g2 = AC.createGain();
-  o.type = "sine"; o.frequency.value = 560; o2.type = "sine"; o2.frequency.value = 560 * 2.4; g2.gain.value = 0.3;
-  gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.4, t + 0.004);
-  gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
-  o.connect(gn); o2.connect(g2); g2.connect(gn); gn.connect(master);
-  o.start(t); o2.start(t); o.stop(t + 0.75); o2.stop(t + 0.75);
-  const s = noiseSrc(), f = AC.createBiquadFilter(), ng = AC.createGain();
-  f.type = "highpass"; f.frequency.value = 6500;
-  ng.gain.setValueAtTime(0.11, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-  s.connect(f); f.connect(ng); ng.connect(master); s.start(t); s.stop(t + 0.55);
+  const o = AC.createOscillator(), og = AC.createGain();
+  o.type = "sine"; o.frequency.value = 520;
+  og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.35, t + 0.004);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.55);
+  metal(t, 45, 0.7, 7000, 0.12);
 }
 
 /* ---------------- canvas + layout ---------------- */
@@ -133,7 +170,7 @@ let W = 0, H = 0, DPR = 1, SC = 1, OX = 0, OY = 0, drums = [];
 
 function buildKit(){
   drums = [
-    { id:"crash",    cymbal:true,  x:300, y:210, r:120, ph:0.0, sound:()=>playCymbal(1.3) },
+    { id:"crash",    cymbal:true,  x:300, y:210, r:120, ph:0.0, sound:playCrash },
     { id:"ride",     cymbal:true,  x:740, y:235, r:130, ph:1.3, sound:playRide },
     { id:"hihat",    cymbal:true,  x:165, y:415, r:95,  ph:2.1, sound:()=>playHat(false) },
     { id:"tom1",     shell:"#c8321f", x:405, y:360, r:85,  sound:()=>playTom(240) },
@@ -148,8 +185,10 @@ function resize(){
   DPR = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  SC = Math.min(W / DW, H / DH);
-  OX = (W - DW * SC) / 2; OY = (H - DH * SC) / 2;
+  const VX = 45, VY = 55, VW = 870, VH = 655;   /* tight box hugging the kit → fills more of the screen */
+  SC = Math.min(W / VW, H / VH);
+  OX = (W - VW * SC) / 2 - VX * SC;
+  OY = (H - VH * SC) / 2 - VY * SC;
 }
 window.addEventListener("resize", resize);
 
