@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fff7ec">
+<title>Color Mixing Puddles</title>
+<!--
+  COLOR MIXING PUDDLES — paint-mixing toy for a 3-year-old (phone, touch-first)
+
+  How it plays:
+  - Tap a paint pot (red, yellow, blue, white) and a blob of paint drops into the bowl. The color is said out loud.
+  - Swirl a finger in the bowl to stir. The paint really blends as she stirs (it mixes like paint,
+    so blue + yellow turns green, not gray).
+  - When it's all mixed, the phone announces it: "Blue and yellow make green!" and the new color
+    pops onto the shelf of colors she's discovered at the top. Tap a shelf color to hear its name again.
+  - If there are two colors in the bowl and she hasn't stirred yet, a swirl arrow appears as a hint.
+  - Colors she can make: orange, green, purple, brown, pink, peach, light yellow, light green,
+    light blue, lavender, tan (plus the four starting colors).
+  - Top-right: wash the bowl for a fresh start. Top-left: sound/voice on/off.
+
+  INTEGRATION NOTES (for Claude Code):
+  - This is a TOY. Parent page is /toys.html. Add a card for it there, and place the file
+    wherever the other toys linked from /toys.html already live.
+  - Fully self-contained: no external fonts, images, audio, scripts, or storage.
+  - No in-page back link on purpose (toddler taps). If the other toys link back to /toys.html,
+    keep it small and away from the top buttons and the paint pots.
+  - Paint is a small grid simulation that stores red/yellow/blue/white amounts and converts to screen color
+    with an RYB (painter's color wheel) model, drawn low-res and stretched so it runs smoothly on phones.
+  - Voice uses the browser's built-in speechSynthesis; audio unlocks on first tap (iOS requirement).
+  - Warm art-studio palette on purpose instead of the site's OLED/green theme — it's kid-facing.
+-->
+<style>
+  :root{
+    --paper:#fff7ec;
+    --table:#f6e6d0;
+    --ink:#5a4636;
+    --pick:#ff6f8f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{touch-action:manipulation}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{
+    display:flex;flex-direction:column;height:100dvh;
+    background:
+      radial-gradient(circle at 12% 18%,rgba(255,143,194,.18) 0 22px,transparent 23px),
+      radial-gradient(circle at 88% 30%,rgba(143,214,242,.2) 0 16px,transparent 17px),
+      radial-gradient(circle at 80% 62%,rgba(255,210,63,.18) 0 26px,transparent 27px),
+      radial-gradient(circle at 8% 70%,rgba(181,140,255,.16) 0 18px,transparent 19px),
+      var(--paper);
+    color:var(--ink);
+    font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  }
+  button{border:0;background:none;cursor:pointer;font:inherit;color:inherit}
+  button:focus-visible{outline:3px solid var(--pick);outline-offset:3px}
+
+  header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 6px}
+  .icon-btn{
+    width:52px;height:52px;border-radius:50%;flex:0 0 auto;
+    background:#fff;box-shadow:0 3px 10px rgba(120,80,40,.15);
+    display:grid;place-items:center
+  }
+  .icon-btn svg{width:30px;height:30px}
+  a.icon-btn{text-decoration:none}
+  .shelf{
+    flex:1;min-width:0;height:52px;border-radius:26px;background:rgba(255,255,255,.7);
+    box-shadow:inset 0 2px 6px rgba(120,80,40,.1);
+    display:flex;align-items:center;gap:8px;padding:0 10px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x
+  }
+  .shelf::-webkit-scrollbar{display:none}
+  .shelf .empty{width:30px;height:30px;border-radius:50%;border:3px dashed #e5d3bd;flex:0 0 auto}
+  .swatch{
+    flex:0 0 auto;width:36px;height:36px;border-radius:50%;
+    background:var(--c);box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.12);
+    border:3px solid #fff
+  }
+  .swatch.new{animation:pop .5s cubic-bezier(.3,1.7,.5,1)}
+  @keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}
+
+  .stage{flex:1;min-height:0;display:grid;place-items:center;padding:6px 12px;position:relative}
+  .bowl{
+    position:relative;border-radius:50%;
+    background:radial-gradient(circle at 50% 40%,#ffffff 0 60%,#eef1f4 75%,#dfe4ea 100%);
+    box-shadow:0 14px 28px rgba(120,80,40,.22), inset 0 0 0 10px #ffffff, inset 0 0 0 13px #e6ebf0;
+    touch-action:none
+  }
+  .puddle{position:absolute;inset:18px;border-radius:50%;overflow:hidden}
+  #paint{width:100%;height:100%;display:block;filter:blur(2.5px)}
+  .gloss{position:absolute;inset:18px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(ellipse at 32% 26%,rgba(255,255,255,.55) 0 8%,rgba(255,255,255,0) 22%)}
+  .bowl.wash .puddle{animation:wash .9s ease-in forwards}
+  @keyframes wash{0%{transform:rotate(0) scale(1);opacity:1}100%{transform:rotate(300deg) scale(.2);opacity:0}}
+  .bowl.wiggle{animation:bowlWiggle .5s ease-in-out}
+  @keyframes bowlWiggle{0%,100%{transform:rotate(0)}30%{transform:rotate(-4deg) scale(1.03)}70%{transform:rotate(3deg) scale(1.03)}}
+
+  .hint{position:absolute;inset:22%;pointer-events:none;opacity:0;transition:opacity .3s}
+  .hint.show{opacity:.9}
+  .hint svg{width:100%;height:100%;animation:spin 2.4s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .pots{
+    display:flex;justify-content:center;gap:12px;
+    padding:10px 12px calc(14px + env(safe-area-inset-bottom));
+    background:var(--table);border-radius:26px 26px 0 0;box-shadow:0 -4px 14px rgba(120,80,40,.12)
+  }
+  .pot{width:80px;height:88px;display:grid;place-items:center;transition:transform .12s}
+  .pot svg{width:100%;height:100%;overflow:visible}
+  .pot:active{transform:scale(.9)}
+  .pot.tip svg{animation:tip .45s ease-in-out}
+  @keyframes tip{0%,100%{transform:rotate(0)}40%{transform:rotate(-18deg) translateY(-8px)}}
+
+  .drop{position:fixed;left:0;top:0;width:26px;height:30px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;pointer-events:none;z-index:50;box-shadow:inset -3px -4px 0 rgba(0,0,0,.12)}
+  .sparkle{position:fixed;width:24px;height:24px;pointer-events:none;z-index:60;animation:sparkle .9s ease-out forwards}
+  @keyframes sparkle{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+    30%{opacity:1}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1) rotate(150deg)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hint svg,.bowl.wiggle,.pot.tip svg,.swatch.new{animation:none}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a class="icon-btn home" href="../toys.html" aria-label="Back to toys">
+      <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#b0673f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-7 7 7 7"/></svg>
+    </a>
+    <button class="icon-btn" id="soundBtn" aria-label="Sound on" aria-pressed="true">
+      <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#b0673f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10h4l5-4v14l-5-4H4z" fill="#b0673f"/>
+        <path id="waves" d="M17 9.5a5 5 0 0 1 0 7M20 7a8.5 8.5 0 0 1 0 12"/>
+        <path id="mute" d="M17 10l6 6M23 10l-6 6" style="display:none"/>
+      </svg>
+    </button>
+    <div class="shelf" id="shelf" role="group" aria-label="Colors I made"></div>
+    <button class="icon-btn" id="washBtn" aria-label="Wash the bowl">
+      <svg viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M15,3 C15,3 6,13 6,19 C6,24 10,27 15,27 C20,27 24,24 24,19 C24,13 15,3 15,3 Z" fill="#8fd6f2"/>
+        <path d="M11,19 C11,22 13,23.5 15,23.5" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <circle cx="24" cy="6" r="2.5" fill="#bfe9ff"/><circle cx="6" cy="8" r="1.8" fill="#bfe9ff"/>
+      </svg>
+    </button>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="bowl" id="bowl">
+      <div class="puddle"><canvas id="paint" aria-label="Paint bowl. Swirl your finger to mix."></canvas></div>
+      <div class="gloss"></div>
+      <div class="hint" id="hint" aria-hidden="true">
+        <svg viewBox="0 0 100 100">
+          <path d="M50,10 A40,40 0 1 1 14,32" stroke="#ffffff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".9"/>
+          <polygon points="4,26 24,24 16,44" fill="#ffffff" opacity=".9"/>
+          <circle cx="50" cy="10" r="7" fill="#ff6f8f"/>
+        </svg>
+      </div>
+    </div>
+  </main>
+
+  <div class="pots" id="pots" role="group" aria-label="Paint pots"></div>
+
+<script>
+(() => {
+  // ================= PAINT MODEL =================
+  // Each cell stores amounts of Red, Yellow, Blue, White. Screen color uses an RYB cube (painter's mixing).
+  const N = 64;
+  const R = 0, Y = 1, B = 2, WH = 3;
+  let grid = new Float32Array(N * N * 4);
+  const inside = new Uint8Array(N * N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const dx = i + 0.5 - N / 2, dy = j + 0.5 - N / 2;
+    inside[j * N + i] = Math.hypot(dx, dy) < N / 2 - 0.5 ? 1 : 0;
+  }
+
+  // RYB cube corners -> RGB (tuned brighter for kids)
+  const CUBE = [
+    [1, 1, 1],        // none (white)
+    [0.93, 0.16, 0.2],// red
+    [1, 0.86, 0.1],   // yellow
+    [1, 0.55, 0.05],  // red+yellow = orange
+    [0.12, 0.42, 0.9],// blue
+    [0.55, 0.22, 0.72],// red+blue = purple
+    [0.18, 0.68, 0.28],// yellow+blue = green
+    [0.46, 0.29, 0.14] // all = brown
+  ];
+  function ryb2rgb(r, y, b) {
+    const out = [0, 0, 0];
+    for (let k = 0; k < 3; k++) {
+      const x0 = CUBE[0][k] * (1 - r) + CUBE[1][k] * r;
+      const x1 = CUBE[2][k] * (1 - r) + CUBE[3][k] * r;
+      const x2 = CUBE[4][k] * (1 - r) + CUBE[5][k] * r;
+      const x3 = CUBE[6][k] * (1 - r) + CUBE[7][k] * r;
+      const y0 = x0 * (1 - y) + x1 * y;
+      const y1 = x2 * (1 - y) + x3 * y;
+      out[k] = y0 * (1 - b) + y1 * b;
+    }
+    return out;
+  }
+  function mixToRGB(r, y, b, w) {
+    const total = r + y + b + w;
+    if (total <= 0) return [1, 1, 1];
+    const m = Math.max(r, y, b);
+    let rgb = m > 0 ? ryb2rgb(r / m, y / m, b / m) : [1, 1, 1];
+    const wf = w / total;
+    const lighten = m > 0 ? wf * 0.78 : 0;
+    const base = m > 0 ? rgb : [0.97, 0.96, 0.93];
+    return base.map((c) => c + (1 - c) * lighten);
+  }
+  const toCss = (rgb) => `rgb(${rgb.map((c) => Math.round(c * 255)).join(',')})`;
+
+  const PAINTS = [
+    { key: R, name: 'red', rgb: [0.93, 0.16, 0.2] },
+    { key: Y, name: 'yellow', rgb: [1, 0.86, 0.1] },
+    { key: B, name: 'blue', rgb: [0.12, 0.42, 0.9] },
+    { key: WH, name: 'white', rgb: [0.98, 0.97, 0.95] }
+  ];
+
+  function colorName(fr) {
+    const hasR = fr[R] > 0.08, hasY = fr[Y] > 0.08, hasB = fr[B] > 0.08;
+    const hues = (hasR ? 1 : 0) + (hasY ? 1 : 0) + (hasB ? 1 : 0);
+    const hueTotal = fr[R] + fr[Y] + fr[B];
+    const light = fr[WH] > 0.18 && hueTotal > 0;
+    let base;
+    if (hues === 0) return 'white';
+    if (hues === 3) base = 'brown';
+    else if (hasR && hasY) base = 'orange';
+    else if (hasY && hasB) base = 'green';
+    else if (hasR && hasB) base = 'purple';
+    else base = hasR ? 'red' : hasY ? 'yellow' : 'blue';
+    if (!light) return base;
+    return { red: 'pink', yellow: 'light yellow', blue: 'light blue', orange: 'peach', green: 'light green', purple: 'lavender', brown: 'tan' }[base];
+  }
+
+  // ================= ELEMENTS =================
+  const bowl = document.getElementById('bowl');
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('paint');
+  const ctx = canvas.getContext('2d');
+  const hintEl = document.getElementById('hint');
+  const shelfEl = document.getElementById('shelf');
+  const potsEl = document.getElementById('pots');
+  canvas.width = N;
+  canvas.height = N;
+  const img = ctx.createImageData(N, N);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let dirty = true;
+  let lastAnnounced = '';
+  let stirredSinceDrop = false;
+  let lastStir = 0;
+  let lastDrop = 0;
+  let saidStir = false;
+  let discovered = [];
+  let busy = false;
+
+  function sizeBowl() {
+    const r = stage.getBoundingClientRect();
+    const d = Math.max(180, Math.min(r.width - 24, r.height - 12, 520));
+    bowl.style.width = d + 'px';
+    bowl.style.height = d + 'px';
+  }
+
+  // ================= GRID OPS =================
+  function addBlob(cx, cy, key, amount = 2.2, rad = 9) {
+    for (let j = Math.floor(cy - rad); j <= Math.ceil(cy + rad); j++) {
+      for (let i = Math.floor(cx - rad); i <= Math.ceil(cx + rad); i++) {
+        if (i < 0 || j < 0 || i >= N || j >= N || !inside[j * N + i]) continue;
+        const wobble = 1 + Math.sin(Math.atan2(j - cy, i - cx) * 5) * 0.12;
+        const d = Math.hypot(i - cx, j - cy) / (rad * wobble);
+        if (d > 1) continue;
+        const o = (j * N + i) * 4;
+        const t = grid[o] + grid[o + 1] + grid[o + 2] + grid[o + 3];
+        const add = amount * (1 - d * d);
+        const room = Math.max(0, 3.2 - t);
+        grid[o + key] += Math.min(add, room);
+      }
+    }
+    dirty = true;
+  }
+
+  const snap = new Float32Array(N * N * 4);
+  function stirAt(px, py, mx, my) {
+    const rad = 7;
+    const x0 = Math.max(0, Math.floor(px - rad - 4)), x1 = Math.min(N - 1, Math.ceil(px + rad + 4));
+    const y0 = Math.max(0, Math.floor(py - rad - 4)), y1 = Math.min(N - 1, Math.ceil(py + rad + 4));
+    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
+      const o = (j * N + i) * 4;
+      snap[o] = grid[o]; snap[o + 1] = grid[o + 1]; snap[o + 2] = grid[o + 2]; snap[o + 3] = grid[o + 3];
+    }
+    for (let j = Math.max(1, Math.floor(py - rad)); j <= Math.min(N - 2, Math.ceil(py + rad)); j++) {
+      for (let i = Math.max(1, Math.floor(px - rad)); i <= Math.min(N - 2, Math.ceil(px + rad)); i++) {
+        const idx = j * N + i;
+        if (!inside[idx]) continue;
+        const d = Math.hypot(i - px, j - py) / rad;
+        if (d > 1) continue;
+        const w = (1 - d) * 0.8;
+        const si = Math.round(i - mx * 2.2), sj = Math.round(j - my * 2.2);
+        const sOk = si >= x0 && si <= x1 && sj >= y0 && sj <= y1 && inside[sj * N + si];
+        const so = (sOk ? sj * N + si : idx) * 4;
+        const o = idx * 4;
+        for (let c = 0; c < 4; c++) {
+          const nb = (snap[o - 4 + c] + snap[o + 4 + c] + snap[o - N * 4 + c] + snap[o + N * 4 + c]) * 0.25;
+          let v = snap[o + c] + (snap[so + c] - snap[o + c]) * w;
+          v += (nb - v) * 0.22 * w;
+          grid[o + c] = v;
+        }
+      }
+    }
+    dirty = true;
+  }
+
+  function stroke(x0, y0, x1, y1) {
+    const dx = x1 - x0, dy = y1 - y0;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.05) return;
+    const steps = Math.ceil(len / 1.2);
+    for (let s = 1; s <= steps; s++) {
+      stirAt(x0 + (dx * s) / steps, y0 + (dy * s) / steps, dx / steps, dy / steps);
+    }
+  }
+
+  function render() {
+    const d = img.data;
+    for (let idx = 0; idx < N * N; idx++) {
+      const o = idx * 4;
+      const t = grid[o] + grid[o + 1] + grid[o + 2] + grid[o + 3];
+      if (t < 0.015 || !inside[idx]) { d[o + 3] = 0; continue; }
+      const rgb = mixToRGB(grid[o], grid[o + 1], grid[o + 2], grid[o + 3]);
+      const shade = 1 - Math.max(0, Math.min(0.1, (t - 1) * 0.05));
+      d[o] = rgb[0] * 255 * shade;
+      d[o + 1] = rgb[1] * 255 * shade;
+      d[o + 2] = rgb[2] * 255 * shade;
+      const a = Math.min(1, Math.max(0, (t - 0.015) / 0.12));
+      d[o + 3] = 255 * a * a * (3 - 2 * a);
+    }
+    ctx.putImageData(img, 0, 0);
+    dirty = false;
+  }
+
+  function analyze() {
+    let sum = [0, 0, 0, 0], tot = 0;
+    for (let idx = 0; idx < N * N; idx++) {
+      const o = idx * 4;
+      const t = grid[o] + grid[o + 1] + grid[o + 2] + grid[o + 3];
+      if (t < 0.03) continue;
+      for (let c = 0; c < 4; c++) sum[c] += grid[o + c];
+      tot += t;
+    }
+    if (tot < 0.5) return null;
+    const mean = sum.map((s) => s / tot);
+    let dev = 0;
+    for (let idx = 0; idx < N * N; idx++) {
+      const o = idx * 4;
+      const t = grid[o] + grid[o + 1] + grid[o + 2] + grid[o + 3];
+      if (t < 0.03) continue;
+      for (let c = 0; c < 4; c++) dev += Math.abs(grid[o + c] / t - mean[c]) * t;
+    }
+    dev /= tot;
+    const present = PAINTS.filter((p) => mean[p.key] > 0.08);
+    return { mean, dev, present, name: colorName(mean), rgb: mixToRGB(mean[R], mean[Y], mean[B], mean[WH]) };
+  }
+
+  // ================= POTS =================
+  PAINTS.forEach((p) => {
+    const b = document.createElement('button');
+    b.className = 'pot';
+    b.setAttribute('aria-label', p.name + ' paint');
+    const c = toCss(p.rgb);
+    const dark = toCss(p.rgb.map((v) => v * 0.78));
+    b.innerHTML = `<svg viewBox="0 0 80 88" aria-hidden="true">
+      <ellipse cx="40" cy="82" rx="30" ry="5" fill="rgba(90,70,54,.15)"/>
+      <path d="M14,30 L18,76 Q40,86 62,76 L66,30 Z" fill="#ffffff" stroke="#e9dccb" stroke-width="2"/>
+      <path d="M16,48 L18,76 Q40,86 62,76 L64,48 Q40,56 16,48 Z" fill="${c}" opacity=".95"/>
+      <ellipse cx="40" cy="30" rx="27" ry="9" fill="${c}" stroke="${p.key === WH ? '#e9dccb' : dark}" stroke-width="2.5"/>
+      <path d="M58,32 Q62,40 58,46" stroke="${c}" stroke-width="6" stroke-linecap="round" fill="none"/>
+      <ellipse cx="32" cy="28" rx="8" ry="2.5" fill="#fff" opacity=".45"/>
+      <rect x="44" y="2" width="7" height="26" rx="3" fill="#c98f45" transform="rotate(18 47 15)"/>
+      <rect x="44" y="18" width="7" height="8" rx="1" fill="#b7bcc2" transform="rotate(18 47 22)"/>
+    </svg>`;
+    b.addEventListener('click', () => pour(p, b));
+    potsEl.appendChild(b);
+  });
+
+  function pour(p, btn) {
+    unlockAudio();
+    if (busy) return;
+    btn.classList.remove('tip');
+    void btn.getBoundingClientRect();
+    btn.classList.add('tip');
+    say(p.name);
+
+    const pr = btn.getBoundingClientRect();
+    const br = bowl.getBoundingClientRect();
+    const ang = Math.random() * Math.PI * 2;
+    const dist = Math.random() * 0.28;
+    const gx = N / 2 + Math.cos(ang) * dist * N;
+    const gy = N / 2 + Math.sin(ang) * dist * N;
+    const inset = 18;
+    const tx = br.left + inset + (gx / N) * (br.width - inset * 2);
+    const ty = br.top + inset + (gy / N) * (br.height - inset * 2);
+    const sx = pr.left + pr.width / 2, sy = pr.top + pr.height * 0.25;
+
+    const drop = document.createElement('div');
+    drop.className = 'drop';
+    drop.style.background = toCss(p.rgb);
+    if (p.key === WH) drop.style.border = '2px solid #e9dccb';
+    document.body.appendChild(drop);
+    const midX = (sx + tx) / 2, midY = Math.min(sy, ty) - 60;
+    drop.animate([
+      { transform: `translate(${sx - 13}px, ${sy - 15}px) scale(.6)` },
+      { transform: `translate(${midX - 13}px, ${midY - 15}px) scale(1)`, offset: 0.5 },
+      { transform: `translate(${tx - 13}px, ${ty - 15}px) scale(1.1)` }
+    ], { duration: reduceMotion ? 200 : 550, easing: 'ease-in' }).onfinish = () => {
+      drop.remove();
+      addBlob(gx, gy, p.key);
+      splat();
+      stirredSinceDrop = false;
+      lastDrop = performance.now();
+      lastAnnounced = lastAnnounced && analyze()?.name === lastAnnounced ? lastAnnounced : '';
+      bowl.classList.remove('wiggle');
+      void bowl.getBoundingClientRect();
+      bowl.classList.add('wiggle');
+      const a = analyze();
+      if (a && a.present.length >= 2 && !saidStir) {
+        saidStir = true;
+        setTimeout(() => say('Now stir it up!'), 700);
+      }
+    };
+  }
+
+  // ================= STIRRING =================
+  const pointers = new Map();
+  const toGrid = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * N, y: ((e.clientY - r.top) / r.height) * N };
+  };
+
+  bowl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    unlockAudio();
+    if (busy) return;
+    try { bowl.setPointerCapture(e.pointerId); } catch (_) {}
+    pointers.set(e.pointerId, { ...toGrid(e), lastSound: 0 });
+  });
+  bowl.addEventListener('pointermove', (e) => {
+    const p = pointers.get(e.pointerId);
+    if (!p || busy) return;
+    let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    if (!evs || !evs.length) evs = [e];
+    let moved = 0;
+    for (const ev of evs) {
+      const g = toGrid(ev);
+      moved += Math.hypot(g.x - p.x, g.y - p.y);
+      stroke(p.x, p.y, g.x, g.y);
+      p.x = g.x; p.y = g.y;
+    }
+    if (moved > 0.3) {
+      stirredSinceDrop = true;
+      lastStir = performance.now();
+      hintEl.classList.remove('show');
+      if (lastStir - p.lastSound > 150) { squish(); p.lastSound = lastStir; }
+    }
+  });
+  const endPointer = (e) => pointers.delete(e.pointerId);
+  bowl.addEventListener('pointerup', endPointer);
+  bowl.addEventListener('pointercancel', endPointer);
+
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  bowl.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+  // ================= DISCOVERY =================
+  function renderShelf(newName) {
+    shelfEl.innerHTML = '';
+    if (!discovered.length) {
+      for (let i = 0; i < 5; i++) {
+        const e = document.createElement('div');
+        e.className = 'empty';
+        shelfEl.appendChild(e);
+      }
+      return;
+    }
+    discovered.forEach((d) => {
+      const b = document.createElement('button');
+      b.className = 'swatch' + (d.name === newName ? ' new' : '');
+      b.style.setProperty('--c', toCss(d.rgb));
+      b.setAttribute('aria-label', d.name);
+      b.addEventListener('click', () => { unlockAudio(); say(d.name); tone(988, 0, 0.25, 0.25); });
+      shelfEl.appendChild(b);
+    });
+    shelfEl.scrollLeft = shelfEl.scrollWidth;
+  }
+
+  function announce(a) {
+    lastAnnounced = a.name;
+    const names = a.present.map((p) => p.name);
+    const list = names.length === 2 ? `${names[0]} and ${names[1]}` : `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+    const sentence = `${list.charAt(0).toUpperCase() + list.slice(1)} make ${a.name}!`;
+    say(sentence);
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.09, 0.55, 0.3));
+    const existing = discovered.find((d) => d.name === a.name);
+    if (existing) {
+      existing.rgb = a.rgb;
+      renderShelf(a.name);
+    } else {
+      discovered.push({ name: a.name, rgb: a.rgb });
+      renderShelf(a.name);
+    }
+    const br = bowl.getBoundingClientRect();
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => sparkles(br.left + br.width * (0.25 + Math.random() * 0.5), br.top + br.height * (0.25 + Math.random() * 0.5), 7, toCss(a.rgb)), i * 160);
+    }
+  }
+
+  // ================= WASH =================
+  document.getElementById('washBtn').addEventListener('click', () => {
+    unlockAudio();
+    if (busy) return;
+    busy = true;
+    pointers.clear();
+    hintEl.classList.remove('show');
+    washSound();
+    bowl.classList.add('wash');
+    setTimeout(() => {
+      grid.fill(0);
+      dirty = true;
+      render();
+      bowl.classList.remove('wash');
+      lastAnnounced = '';
+      saidStir = false;
+      busy = false;
+    }, reduceMotion ? 200 : 900);
+  });
+
+  // ================= LOOP =================
+  let lastCheck = 0;
+  const blurBuf = new Float32Array(N * N * 4);
+  function relax(k) {
+    blurBuf.set(grid);
+    for (let j = 1; j < N - 1; j++) {
+      for (let i = 1; i < N - 1; i++) {
+        const idx = j * N + i;
+        if (!inside[idx]) continue;
+        const o = idx * 4;
+        for (let c = 0; c < 4; c++) {
+          let sum = 0, n = 0;
+          if (inside[idx - 1]) { sum += blurBuf[o - 4 + c]; n++; }
+          if (inside[idx + 1]) { sum += blurBuf[o + 4 + c]; n++; }
+          if (inside[idx - N]) { sum += blurBuf[o - N * 4 + c]; n++; }
+          if (inside[idx + N]) { sum += blurBuf[o + N * 4 + c]; n++; }
+          if (n) grid[o + c] = blurBuf[o + c] + (sum / n - blurBuf[o + c]) * k;
+        }
+      }
+    }
+    dirty = true;
+  }
+
+  function frame(ts) {
+    if (pointers.size && ts - lastStir < 150) relax(0.12);
+    if (dirty) render();
+    if (ts - lastCheck > 300 && !busy) {
+      lastCheck = ts;
+      const a = analyze();
+      if (a && a.present.length >= 2) {
+        if (a.dev < 0.1 && a.name !== lastAnnounced && ts - lastStir < 2500) announce(a);
+        const idle = ts - Math.max(lastStir, lastDrop);
+        hintEl.classList.toggle('show', a.dev >= 0.1 && !stirredSinceDrop && idle > 1800);
+      } else {
+        hintEl.classList.remove('show');
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ================= EFFECTS + SOUND =================
+  const starPts = (x, y, r, ri = r * 0.45) => {
+    const p = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? ri : r;
+      p.push((x + Math.cos(a) * rr).toFixed(1) + ',' + (y + Math.sin(a) * rr).toFixed(1));
+    }
+    return p.join(' ');
+  };
+  function sparkles(x, y, n, color) {
+    const colors = [color || '#FFD23F', '#FFD23F', '#ffffff'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'sparkle';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.setProperty('--dx', (Math.random() * 110 - 55) + 'px');
+      el.style.setProperty('--dy', (Math.random() * -90 - 10) + 'px');
+      el.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="${starPts(12, 12, 11, 4)}" fill="${colors[i % colors.length]}" stroke="#fff" stroke-width="1"/></svg>`;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  let ac = null, master = null, noiseBuf = null, soundOn = true;
+  function unlockAudio() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.18;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 1.5, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === 'suspended') ac.resume();
+  }
+  function tone(freq, when = 0, len = 0.4, vol = 0.3, glideTo) {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime + when;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + len);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + len + 0.05);
+  }
+  function noise(len, freq, q, vol, type = 'bandpass', sweepTo) {
+    if (!ac || !soundOn) return;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = ac.createBiquadFilter();
+    f.type = type;
+    f.frequency.setValueAtTime(freq, t);
+    if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t + len);
+    f.Q.value = q;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t, Math.random() * 0.8); src.stop(t + len + 0.05);
+  }
+  const splat = () => { tone(260, 0, 0.18, 0.4, 120); noise(0.15, 700, 1, 0.35, 'lowpass'); };
+  const squish = () => noise(0.18, 500 + Math.random() * 300, 3, 0.22, 'bandpass', 900);
+  const washSound = () => { noise(1, 600, 0.7, 0.6, 'bandpass', 2400); [1319, 1175, 988, 784].forEach((f, i) => tone(f, 0.3 + i * 0.1, 0.3, 0.15)); };
+
+  function say(text) {
+    if (!soundOn || !text || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text.charAt(0).toUpperCase() + text.slice(1));
+      u.rate = 0.9;
+      u.pitch = 1.2;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', () => {
+    unlockAudio();
+    soundOn = !soundOn;
+    if (!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    document.getElementById('waves').style.display = soundOn ? '' : 'none';
+    document.getElementById('mute').style.display = soundOn ? 'none' : '';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    if (soundOn) tone(880, 0, 0.25, 0.3);
+  });
+
+  // ================= START =================
+  window.addEventListener('resize', sizeBowl);
+  sizeBowl();
+  renderShelf();
+  render();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
