@@ -64,7 +64,8 @@
   .screen.on{display:flex}
 
   /* ---------- menu ---------- */
-  #menu{align-items:center;justify-content:center;gap:14px;padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom))}
+  #menu{align-items:center;justify-content:flex-start;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom))}
+  #menu > *{flex:0 0 auto}
   .title{font-size:40px;font-weight:900;letter-spacing:.5px;color:var(--bone);text-shadow:0 4px 0 var(--dirt-dark);text-align:center;line-height:1}
   .title small{display:block;font-size:15px;font-weight:700;letter-spacing:2px;color:#e9d7b5;margin-top:6px;text-shadow:none}
   .mascot{width:190px;height:130px}
@@ -82,8 +83,33 @@
   .level .sub{font-size:14px;font-weight:700;opacity:.7}
   .stars{display:flex;gap:2px}
   .stars svg{width:22px;height:22px}
-  .corner-sound{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.25);display:grid;place-items:center}
+  .corner-sound{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.25);display:grid;place-items:center;z-index:5}
   .corner-sound svg{width:26px;height:26px}
+  .corner-back{position:fixed;top:calc(10px + env(safe-area-inset-top));left:12px;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.25);display:grid;place-items:center;z-index:5;text-decoration:none}
+  .corner-back svg{width:26px;height:26px}
+  .museum-btn{
+    display:flex;align-items:center;gap:12px;width:100%;max-width:360px;margin-top:2px;
+    background:var(--dirt-dark);color:var(--bone);border-radius:20px;padding:12px 18px;
+    box-shadow:0 5px 0 #20160e;transition:transform .1s
+  }
+  .museum-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #20160e}
+  .museum-btn .mbone{width:40px;height:34px;flex:0 0 auto}
+  .museum-btn span{font-size:20px;font-weight:900}
+  .museum-btn .mcount{margin-left:auto;font-size:15px;font-weight:800;opacity:.75}
+
+  /* ---------- museum ---------- */
+  #museum{padding:calc(12px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom))}
+  .museum-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .museum-top .home{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.25);display:grid;place-items:center;flex:0 0 auto}
+  .museum-top .home svg{width:24px;height:24px}
+  .museum-title{font-size:26px;font-weight:900;text-shadow:0 3px 0 var(--dirt-dark)}
+  .museum-tally{margin-left:auto;font-size:15px;font-weight:800;color:#e9d7b5}
+  .museum-grid{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:repeat(auto-fill,minmax(94px,1fr));gap:12px;align-content:start;padding-bottom:10px}
+  .fossil{background:var(--stone);color:var(--ink);border-radius:18px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 4px 0 var(--stone-dark);transition:transform .1s}
+  .fossil:active{transform:translateY(3px);box-shadow:0 2px 0 var(--stone-dark)}
+  .fossil .emoji{font-size:44px;line-height:1}
+  .fossil .word{font-size:16px;font-weight:900;letter-spacing:1px}
+  .museum-empty{grid-column:1/-1;text-align:center;color:#e9d7b5;font-size:17px;font-weight:700;padding:46px 20px;line-height:1.6}
 
   /* ---------- game ---------- */
   #game{padding:calc(8px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))}
@@ -155,6 +181,19 @@
   .choice.wrong{opacity:.25;transform:scale(.9) rotate(-6deg)}
   .choice.right{background:var(--green);box-shadow:0 6px 0 #3e8f4b}
 
+  /* fix + tricky-word rounds */
+  .fixhint{font-size:16px;font-weight:800;color:#f0dfbf;opacity:.9;text-align:center}
+  .fixslot{cursor:pointer;transition:transform .1s,background .2s,color .2s}
+  .fixslot:active{transform:translateY(3px)}
+  .slot.bad{animation:shake .4s}
+  .speak.big{width:74px;height:74px}
+  .speak.big svg{width:40px;height:40px}
+  .choices.words{flex-direction:column;align-items:center;gap:10px}
+  .wordchoice{
+    width:auto;height:auto;min-width:150px;padding:14px 26px;border-radius:18px;
+    font-size:34px;font-weight:900;letter-spacing:2px;color:var(--ink)
+  }
+
   .feedback{min-height:34px;font-size:24px;font-weight:900;color:var(--gold);text-shadow:0 2px 0 var(--dirt-dark);text-align:center}
   .feedback.bad{color:#ffb3b3}
 
@@ -203,6 +242,9 @@
 <body>
   <!-- MENU -->
   <section class="screen on" id="menu">
+    <a class="corner-back" href="../" aria-label="Back to games">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#f7efdc" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-7 7 7 7"/></svg>
+    </a>
     <button class="corner-sound" id="soundBtn" aria-label="Sound on" aria-pressed="true">
       <svg viewBox="0 0 26 26" aria-hidden="true" fill="none" stroke="#f7efdc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 10h4l5-4v14l-5-4H4z" fill="#f7efdc"/>
@@ -213,6 +255,26 @@
     <svg class="mascot" id="menuStego" viewBox="0 0 190 130" aria-hidden="true"></svg>
     <h1 class="title">Fossil Words<small>DIG · READ · SPELL</small></h1>
     <div class="levels" id="levels"></div>
+    <button class="museum-btn" id="museumBtn" aria-label="Open the Fossil Museum">
+      <svg class="mbone" viewBox="0 0 78 64" aria-hidden="true">
+        <path d="M16,14 C6,4 -2,16 6,24 C-2,32 6,44 16,34 L20,30 L58,30 L62,34 C72,44 80,32 72,24 C80,16 72,4 62,14 L58,18 L20,18 Z" fill="#f7efdc" transform="translate(0 8)"/>
+        <rect x="12" y="14" width="54" height="36" rx="12" fill="#f7efdc"/>
+      </svg>
+      <span>Fossil Museum</span>
+      <span class="mcount" id="museumCount"></span>
+    </button>
+  </section>
+
+  <!-- MUSEUM -->
+  <section class="screen" id="museum">
+    <div class="museum-top">
+      <button class="home" id="museumBack" aria-label="Back to menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="#f7efdc"><path d="M12 3 L2 12 H5 V21 H10 V15 H14 V21 H19 V12 H22 Z"/></svg>
+      </button>
+      <h2 class="museum-title">Fossil Museum</h2>
+      <div class="museum-tally" id="museumTally"></div>
+    </div>
+    <div class="museum-grid" id="museumGrid"></div>
   </section>
 
   <!-- GAME -->
@@ -239,29 +301,62 @@
 (() => {
   // ================= WORD BANKS =================
   const LEVELS = [
-    { name: 'Short Words', sub: 'cat · dog · bug', time: 22, words: [
-      ['cat', '🐱'], ['dog', '🐶'], ['pig', '🐷'], ['hen', '🐔'], ['bug', '🐛'], ['sun', '☀️'], ['bat', '🦇'],
-      ['bed', '🛏️'], ['box', '📦'], ['hat', '🎩'], ['map', '🗺️'], ['van', '🚐'], ['fox', '🦊'], ['web', '🕸️'],
-      ['pen', '🖊️'], ['jet', '✈️'], ['bus', '🚌'], ['net', '🥅'], ['pan', '🍳'], ['log', '🪵'], ['pot', '🍲'],
-      ['rat', '🐀'], ['cap', '🧢'], ['bag', '👜'], ['cup', '🥤'], ['six', '6️⃣'], ['ten', '🔟'], ['egg', '🥚']
+    { name: 'First Digs', sub: 'cat · dog · sun', time: 30, words: [
+      ['cat', '🐱'], ['dog', '🐶'], ['pig', '🐷'], ['cow', '🐄'], ['hen', '🐔'], ['bee', '🐝'], ['bug', '🐛'],
+      ['ant', '🐜'], ['owl', '🦉'], ['fox', '🦊'], ['bat', '🦇'], ['sun', '☀️'], ['egg', '🥚'], ['bus', '🚌'],
+      ['hat', '🎩'], ['cup', '🥤'], ['box', '📦'], ['pen', '🖊️'], ['bed', '🛏️'], ['van', '🚐'], ['web', '🕸️'],
+      ['log', '🪵'], ['jet', '✈️'], ['net', '🥅']
+    ] },
+    { name: 'Short Words', sub: 'map · fox · cup', time: 24, words: [
+      ['pig', '🐷'], ['hen', '🐔'], ['bug', '🐛'], ['sun', '☀️'], ['bat', '🦇'], ['bed', '🛏️'], ['box', '📦'],
+      ['hat', '🎩'], ['map', '🗺️'], ['van', '🚐'], ['fox', '🦊'], ['web', '🕸️'], ['pen', '🖊️'], ['jet', '✈️'],
+      ['bus', '🚌'], ['net', '🥅'], ['pan', '🍳'], ['log', '🪵'], ['pot', '🍲'], ['rat', '🐀'], ['cap', '🧢'],
+      ['bag', '👜'], ['cup', '🥤'], ['six', '6️⃣'], ['ten', '🔟'], ['egg', '🥚'], ['gum', '🍬'], ['key', '🔑']
     ] },
     { name: 'Blends', sub: 'frog · drum · nest', time: 26, words: [
       ['frog', '🐸'], ['crab', '🦀'], ['drum', '🥁'], ['flag', '🚩'], ['sled', '🛷'], ['nest', '🪺'], ['tent', '⛺'],
       ['milk', '🥛'], ['plant', '🪴'], ['hand', '✋'], ['gift', '🎁'], ['swim', '🏊'], ['skunk', '🦨'], ['clap', '👏'],
-      ['stop', '🛑'], ['mask', '🎭'], ['drip', '💧'], ['belt', '🥋'], ['grin', '😁'], ['plug', '🔌']
+      ['stop', '🛑'], ['mask', '🎭'], ['drip', '💧'], ['belt', '🥋'], ['grin', '😁'], ['plug', '🔌'],
+      ['truck', '🚚'], ['block', '🧱'], ['snail', '🐌'], ['spoon', '🥄']
     ] },
-    { name: 'sh · ch · th', sub: 'fish · chick · bath · duck', time: 28, words: [
+    { name: 'sh · ch · th', sub: 'fish · chick · bath', time: 28, words: [
       ['fish', '🐟'], ['ship', '🚢'], ['shell', '🐚'], ['chick', '🐥'], ['bath', '🛁'], ['duck', '🦆'], ['sock', '🧦'],
       ['rock', '🪨'], ['lock', '🔒'], ['brush', '🪥'], ['dish', '🍽️'], ['cash', '💵'], ['lunch', '🍱'], ['chips', '🍟'],
-      ['crash', '💥'], ['trash', '🗑️'], ['check', '✅']
+      ['crash', '💥'], ['trash', '🗑️'], ['check', '✅'], ['sheep', '🐑'], ['chair', '🪑'], ['cheese', '🧀'],
+      ['thumb', '👍'], ['teeth', '🦷'], ['clock', '🕐']
+    ] },
+    { name: 'Magic e', sub: 'cake · bike · nose', time: 28, words: [
+      ['cake', '🎂'], ['bike', '🚲'], ['kite', '🪁'], ['nose', '👃'], ['rose', '🌹'], ['bone', '🦴'], ['cube', '🧊'],
+      ['wave', '🌊'], ['snake', '🐍'], ['grape', '🍇'], ['whale', '🐳'], ['flame', '🔥'], ['smile', '😄'],
+      ['globe', '🌐'], ['plate', '🍽️'], ['slide', '🛝'], ['five', '5️⃣'], ['nine', '9️⃣']
+    ] },
+    { name: 'Vowel Teams', sub: 'rain · boat · tree', time: 30, words: [
+      ['rain', '🌧️'], ['train', '🚆'], ['boat', '🚤'], ['goat', '🐐'], ['seed', '🌱'], ['tree', '🌳'], ['leaf', '🍃'],
+      ['bean', '🫘'], ['meat', '🥩'], ['soap', '🧼'], ['road', '🛣️'], ['coat', '🧥'], ['pie', '🥧'], ['snail', '🐌'],
+      ['peach', '🍑'], ['bee', '🐝'], ['moon', '🌙']
+    ] },
+    { name: 'Bossy R', sub: 'car · bird · star', time: 30, words: [
+      ['car', '🚗'], ['star', '⭐'], ['jar', '🫙'], ['bird', '🐦'], ['girl', '👧'], ['corn', '🌽'], ['fork', '🍴'],
+      ['horn', '📯'], ['shark', '🦈'], ['fern', '🌿'], ['storm', '⛈️'], ['purse', '👛'], ['shirt', '👕'],
+      ['turtle', '🐢'], ['tiger', '🐅']
+    ] },
+    { name: 'More Sounds', sub: 'moon · cow · coin', time: 32, words: [
+      ['moon', '🌙'], ['book', '📖'], ['foot', '🦶'], ['pool', '🏊'], ['cow', '🐄'], ['owl', '🦉'], ['crown', '👑'],
+      ['clown', '🤡'], ['coin', '🪙'], ['boy', '👦'], ['house', '🏠'], ['mouse', '🐭'], ['cloud', '☁️'],
+      ['flower', '🌸']
+    ] },
+    { name: 'Tricky Words', sub: 'the · was · said', time: 30, sight: true, words: [
+      ['the', '📜'], ['was', '📜'], ['said', '📜'], ['you', '📜'], ['are', '📜'], ['they', '📜'],
+      ['have', '📜'], ['come', '📜'], ['some', '📜'], ['what', '📜'], ['were', '📜'], ['there', '📜'],
+      ['where', '📜'], ['who', '📜'], ['why', '📜'], ['from', '📜']
     ] }
   ];
 
   const ROUNDS = 10;
-  const STORE_KEY = 'fossilWords_v1';
+  const STORE_KEY = 'fossilWords_v2';
 
   // ================= SAVE DATA =================
-  let save = { unlocked: 1, stars: {}, best: {} };
+  let save = { unlocked: 1, stars: {}, best: {}, found: {} };
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) save = { ...save, ...JSON.parse(raw) };
@@ -339,17 +434,57 @@
       b.addEventListener('click', () => { unlockAudio(); startLevel(n); });
       el.appendChild(b);
     });
+    updateMuseumCount();
   }
 
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id));
   }
 
+  // ================= MUSEUM =================
+  function recordFound(word, pic) {
+    if (!save.found) save.found = {};
+    if (!save.found[word]) { save.found[word] = pic; persist(); updateMuseumCount(); }
+  }
+  function updateMuseumCount() {
+    const el = $('museumCount');
+    if (!el) return;
+    const c = Object.keys(save.found || {}).length;
+    el.textContent = c ? c + ' 🦴' : '';
+  }
+  function renderMuseum() {
+    const grid = $('museumGrid');
+    const found = save.found || {};
+    const total = LEVELS.reduce((s, lv) => s + lv.words.length, 0);
+    const order = [];
+    const seen = new Set();
+    LEVELS.forEach((lv) => lv.words.forEach(([w]) => {
+      if (found[w] && !seen.has(w)) { seen.add(w); order.push([w, found[w]]); }
+    }));
+    Object.keys(found).forEach((w) => { if (!seen.has(w)) { seen.add(w); order.push([w, found[w]]); } });
+    $('museumTally').textContent = order.length + ' / ' + total;
+    if (!order.length) {
+      grid.innerHTML = '<div class="museum-empty">No fossils yet.<br>Play a level to dig some up!</div>';
+      return;
+    }
+    grid.innerHTML = order.map(([w, p]) =>
+      `<button class="fossil" data-w="${w}" aria-label="${w}"><span class="emoji">${p}</span><span class="word">${w}</span></button>`).join('');
+    grid.querySelectorAll('.fossil').forEach((b) => b.addEventListener('click', () => {
+      unlockAudio();
+      const r = b.getBoundingClientRect();
+      sparkles(r.left + r.width / 2, r.top + r.height / 2, 6);
+      tone(660, 0, 0.15, 0.25);
+      say(b.dataset.w, 0.8);
+    }));
+  }
+  $('museumBtn').addEventListener('click', () => { unlockAudio(); renderMuseum(); showScreen('museum'); });
+  $('museumBack').addEventListener('click', () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); showScreen('menu'); });
+
   // ================= GAME STATE =================
   let G = null;
   let timerRaf = null;
   let roundToken = 0;
-  let toldBuild = false, toldRead = false;
+  let toldBuild = false, toldRead = false, toldFix = false, toldSight = false;
 
   function startLevel(n) {
     const lv = LEVELS[n - 1];
@@ -398,8 +533,13 @@
     G.locked = false;
     const [word, pic] = G.queue[G.round];
     const token = ++roundToken;
-    if (G.round % 2 === 0) buildRound(word, pic, token);
-    else readRound(word, pic, token);
+    // Tricky (sight) levels alternate spell/hear; phonics levels add "fix" from level 2 on.
+    const modes = G.lv.sight ? ['build', 'schoose'] : (G.level >= 2 ? ['build', 'read', 'fix'] : ['build', 'read']);
+    const mode = modes[G.round % modes.length];
+    if (mode === 'read') readRound(word, pic, token);
+    else if (mode === 'fix') fixRound(word, pic, token);
+    else if (mode === 'schoose') sightChooseRound(word, pic, token);
+    else buildRound(word, pic, token);
   }
 
   function modeLabel(text, mood = 'happy') {
@@ -441,6 +581,7 @@
         digSound(filled);
         if (filled === letters.length) {
           $('find').classList.add('dug');
+          recordFound(word, pic);
           success(word, token, $('find'));
         }
       } else {
@@ -485,6 +626,7 @@
       if (b.dataset.w === word) {
         b.classList.add('right');
         board.querySelectorAll('.choice').forEach((x) => { x.disabled = true; });
+        recordFound(word, pic);
         success(word, token, b);
       } else {
         b.classList.add('wrong');
@@ -499,6 +641,94 @@
       await sleep(2600);
       if (token !== roundToken) return;
     }
+    startTimer(G.lv.time - 4, () => timeUp(word, token));
+  }
+
+  // ---------- FIX: spot the wrong letter ----------
+  async function fixRound(word, pic, token) {
+    const board = $('board');
+    const vowels = 'aeiou';
+    const pos = Math.floor(Math.random() * word.length);
+    const orig = word[pos];
+    const bank = (vowels.includes(orig) ? vowels : 'bcdfghjklmnprstvwy').split('').filter((c) => c !== orig);
+    const wrong = shuffle(bank)[0];
+    const shown = word.split(''); shown[pos] = wrong;
+
+    board.innerHTML = `
+      ${modeLabel('FIX IT')}
+      <div class="find dug" id="find">${moundSvg}<div class="picture">${pic}</div></div>
+      <div class="fixhint">One letter is wrong. Tap it!</div>
+      <div class="slots" id="slots">${shown.map((c, i) => `<button class="slot fixslot" data-i="${i}" aria-label="letter ${c}">${c}</button>`).join('')}</div>
+      <button class="speak" id="speakBtn" aria-label="Hear the word again">${speakerSvg}</button>
+      <div class="feedback" id="feedback"></div>`;
+
+    $('speakBtn').addEventListener('click', () => { unlockAudio(); say(word, 0.8); });
+
+    board.querySelectorAll('.fixslot').forEach((b) => b.addEventListener('click', () => {
+      if (G.locked || token !== roundToken) return;
+      unlockAudio();
+      if (+b.dataset.i === pos) {
+        b.textContent = word[pos];
+        b.classList.add('filled');
+        b.classList.remove('fixslot');
+        digSound(word.length);
+        recordFound(word, pic);
+        success(word, token, b);
+      } else {
+        b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad');
+        mistake(word, token, 'That one is right!');
+      }
+    }));
+
+    if (!toldFix) {
+      toldFix = true;
+      say('One letter is wrong. Tap the wrong letter to fix it.');
+      await sleep(3000);
+      if (token !== roundToken) return;
+    }
+    say(word, 0.8);
+    startTimer(G.lv.time - 2, () => timeUp(word, token));
+  }
+
+  // ---------- HEAR IT: pick the tricky word ----------
+  async function sightChooseRound(word, pic, token) {
+    const board = $('board');
+    const others = G.lv.words.filter(([w]) => w !== word);
+    const ranked = shuffle(others).sort((a, b) => editDistance(word, a[0]) - editDistance(word, b[0]));
+    const picks = [];
+    for (const o of ranked) { if (picks.length === 2) break; if (!picks.some((p) => p[0] === o[0])) picks.push(o); }
+    const choices = shuffle([[word, pic], ...picks]);
+
+    board.innerHTML = `
+      ${modeLabel('HEAR IT')}
+      <button class="speak big" id="speakBtn" aria-label="Hear the word again">${speakerSvg}</button>
+      <div class="fixhint">Tap the word you hear</div>
+      <div class="choices words" id="choices">${choices.map(([w]) => `<button class="choice wordchoice" data-w="${w}">${w}</button>`).join('')}</div>
+      <div class="feedback" id="feedback"></div>`;
+
+    $('speakBtn').addEventListener('click', () => { unlockAudio(); say(word, 0.85); });
+
+    board.querySelectorAll('.choice').forEach((b) => b.addEventListener('click', () => {
+      if (G.locked || token !== roundToken || b.disabled) return;
+      unlockAudio();
+      if (b.dataset.w === word) {
+        b.classList.add('right');
+        board.querySelectorAll('.choice').forEach((x) => { x.disabled = true; });
+        recordFound(word, pic);
+        success(word, token, b);
+      } else {
+        b.classList.add('wrong'); b.disabled = true;
+        mistake(word, token, 'Look again!');
+      }
+    }));
+
+    if (!toldSight) {
+      toldSight = true;
+      say('Listen. Tap the word you hear.');
+      await sleep(2600);
+      if (token !== roundToken) return;
+    }
+    say(word, 0.85);
     startTimer(G.lv.time - 4, () => timeUp(word, token));
   }
 
@@ -704,12 +934,40 @@
   const fanfare = () => [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.12, 0.4, 0.3, null, 'triangle'));
   const loseSound = () => [392, 349.23, 311.13, 261.63].forEach((f, i) => tone(f, i * 0.18, 0.35, 0.3, null, 'triangle'));
 
+  // Pick the best voice the device actually has (Enhanced/Premium/Neural > Google > named
+  // natural voices). True studio quality would need bundled audio files; this gets the
+  // nicest built-in voice available and avoids the flattest default.
+  let preferredVoice = null;
+  function pickVoice() {
+    if (!('speechSynthesis' in window)) return;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || !voices.length) return;
+    const en = voices.filter((v) => /^en(-|_|$)/i.test(v.lang || ''));
+    const pool = en.length ? en : voices;
+    const score = (v) => {
+      const n = (v.name || '').toLowerCase();
+      let s = 0;
+      if (/enhanced|premium|neural|natural/.test(n)) s += 60;
+      if (/google/.test(n)) s += 45;
+      if (/samantha|ava|allison|serena|karen|moira|tessa|nicky|siri/.test(n)) s += 25;
+      if (/female|woman|girl/.test(n)) s += 10;
+      if (/en-us/i.test(v.lang || '')) s += 8;
+      if (v.localService) s += 4;
+      return s;
+    };
+    preferredVoice = pool.slice().sort((a, b) => score(b) - score(a))[0] || null;
+  }
+  pickVoice();
+  if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = pickVoice;
+
   function say(text, rate = 0.9) {
     if (!soundOn || !text || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US';
+      if (!preferredVoice) pickVoice();
+      if (preferredVoice) u.voice = preferredVoice;
+      u.lang = (preferredVoice && preferredVoice.lang) || 'en-US';
       u.rate = rate;
       u.pitch = 1.05;
       window.speechSynthesis.speak(u);
