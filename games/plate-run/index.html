@@ -77,7 +77,9 @@ h2{font-family:var(--display);font-size:clamp(24px,7vw,36px);margin:0;line-heigh
 .btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
 .keys{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:14px;color:var(--ink-soft)}
 .keys b{color:var(--ink);font-weight:700}
-.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-soft);font-size:13px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-soft);font-size:13px;flex-wrap:wrap}
+.foot-btns{display:flex;gap:10px;align-items:center}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 @media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
 </style>
 
@@ -108,7 +110,10 @@ h2{font-family:var(--display);font-size:clamp(24px,7vw,36px);margin:0;line-heigh
 
   <div class="foot">
     <span id="hint">Ferns are safe. Rocks and logs are not.</span>
-    <button class="btn ghost" id="sound">Sound: on</button>
+    <div class="foot-btns">
+      <a class="btn ghost" href="../">Exit to games</a>
+      <button class="btn ghost" id="sound">Sound: on</button>
+    </div>
   </div>
 </div>
 

@@ -104,6 +104,7 @@ button{font-family:var(--body);font-size:16px;cursor:pointer}
 .btn:active{transform:translateY(2px);box-shadow:none}
 .btn.go{background:var(--flag);border-color:var(--flag);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
 .btn.quiet{border-color:var(--line);color:var(--ink-soft);box-shadow:none;padding:9px 12px;min-height:0}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;text-decoration:none}
 .btn[disabled]{opacity:.4;cursor:default;box-shadow:none}
 .btn:focus-visible,.word:focus-visible,.site:focus-visible{outline:3px solid var(--mineral);outline-offset:2px}
 
@@ -236,6 +237,7 @@ button{font-family:var(--body);font-size:16px;cursor:pointer}
     </div>
     <div class="sites" id="odd-sites"></div>
     <div class="row">
+      <a class="btn quiet" href="../">Exit to games</a>
       <button class="btn quiet" id="to-museum">My museum</button>
       <button class="btn quiet" id="sound-toggle">Sound: on</button>
     </div>

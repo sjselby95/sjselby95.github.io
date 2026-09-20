@@ -71,7 +71,9 @@ h2{font-family:var(--display);font-size:clamp(24px,7vw,36px);margin:0;line-heigh
 .btn:active{transform:translateY(3px);box-shadow:none}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none;font-size:15px;padding:10px 18px;min-height:0}
 .btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
-.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-soft);font-size:13px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--ink-soft);font-size:13px;flex-wrap:wrap}
+.foot-btns{display:flex;gap:10px;align-items:center}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .name{font-size:13px;color:var(--ink-soft);max-width:40ch;margin:0 auto}
 @media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
 </style>
@@ -103,7 +105,10 @@ h2{font-family:var(--display);font-size:clamp(24px,7vw,36px);margin:0;line-heigh
 
   <div class="foot">
     <span>Left = tail. Right = stomp.</span>
-    <button class="btn ghost" id="sound">Sound: on</button>
+    <div class="foot-btns">
+      <a class="btn ghost" href="../">Exit to games</a>
+      <button class="btn ghost" id="sound">Sound: on</button>
+    </div>
   </div>
 </div>
 
